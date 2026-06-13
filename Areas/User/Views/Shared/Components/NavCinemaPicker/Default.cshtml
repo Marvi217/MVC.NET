@@ -1,0 +1,40 @@
+@model IEnumerable<CinePlex.Models.Cinema>
+@{
+    var selected = ViewBag.SelectedCinema as CinePlex.Models.Cinema;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+<div class="dropdown">
+    <button class="cinema-picker-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="cinema-picker-name">@(selected?.Name ?? "Wybierz kino")</span>
+        @if (selected != null)
+        {
+            <span class="cinema-picker-city">@selected.City</span>
+        }
+    </button>
+    <ul class="dropdown-menu cinema-picker-dropdown">
+        @foreach (var c in Model)
+        {
+            <li>
+                <a class="dropdown-item @(c.CinemaId == selected?.CinemaId ? "active" : "")"
+                   asp-controller="Home" asp-action="SelectCinema"
+                   asp-route-cinemaId="@c.CinemaId"
+                   asp-route-returnUrl="@returnUrl">
+                    <strong>@c.Name</strong>
+                    <small class="ms-1">@c.City</small>
+                </a>
+            </li>
+        }
+        @if (selected != null)
+        {
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+                <a class="dropdown-item"
+                   asp-controller="Home" asp-action="SelectCinema"
+                   asp-route-cinemaId=""
+                   asp-route-returnUrl="@returnUrl">
+                    Wyczyść wybór
+                </a>
+            </li>
+        }
+    </ul>
+</div>

@@ -1,0 +1,431 @@
+﻿@using CinePlex.Models
+@{
+    ViewData["Title"] = "Masowe planowanie seansów";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    var minDate      = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
+    var minDateLabel = DateTime.Today.AddDays(7).ToString("dd.MM.yyyy");
+    var audioOptions = Enum.GetValues<AudioVersion>().Select(a => new {
+        val   = (int)a,
+        label = a switch {
+            AudioVersion.Dubbed    => "Dubbing",
+            AudioVersion.Subtitled => "Napisy",
+            AudioVersion.Original  => "Oryginalny",
+            _                      => a.ToString()
+        }
+    }).ToList();
+    var audioJson = System.Text.Json.JsonSerializer.Serialize(audioOptions);
+}
+
+@section Styles {
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css" />
+<style>
+    .flatpickr-calendar { background: #1c1916 !important; border: 1px solid #2a2420 !important; box-shadow: 0 8px 30px rgba(0,0,0,.6) !important; }
+    .flatpickr-months { background: #1a1612; }
+    .flatpickr-month { color: #fff !important; fill: #fff !important; }
+    .flatpickr-current-month .numInputWrapper input,
+    .flatpickr-current-month .flatpickr-monthDropdown-months { color: #fff !important; }
+    .flatpickr-weekday { color: var(--text-muted) !important; }
+    .flatpickr-day { color: #ddd; border-radius: 6px; }
+    .flatpickr-day:hover { background: rgba(229,9,20,.18) !important; border-color: rgba(229,9,20,.4) !important; }
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover { background: #e50914 !important; border-color: #e50914 !important; color: #fff !important; }
+    .flatpickr-day.today { border-color: rgba(229,9,20,.5) !important; }
+    .flatpickr-day.flatpickr-disabled,
+    .flatpickr-day.flatpickr-disabled:hover { color: #3a3a3a !important; cursor: not-allowed; background: transparent !important; border-color: transparent !important; }
+    .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: #aaa !important; }
+    .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: #e50914 !important; }
+    .numInputWrapper:hover, .numInputWrapper span { background: transparent; border-color: #2a2420; }
+    .flatpickr-input[readonly] { cursor: pointer; }
+
+    .day-btn { min-width: 44px; }
+    .day-btn.active { background: var(--red) !important; border-color: var(--red) !important; color: #fff !important; }
+    .slot-row { display: grid; grid-template-columns: 150px 130px 1fr 36px; gap: .4rem; align-items: center; }
+    .slot-row + .slot-row { margin-top: .35rem; }
+    .slot-header { display: grid; grid-template-columns: 150px 130px 1fr 36px; gap: .4rem; }
+    #bulkCounter {
+        background: rgba(229,9,20,.08); border: 1px solid rgba(229,9,20,.2);
+        border-radius: 8px; padding: .6rem 1rem; font-size: .9rem;
+        color: var(--red); font-weight: 600;
+    }
+    .default-hall-bar { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: .6rem .75rem; }
+</style>
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+    <h5 class="mb-0">Masowe planowanie seansów</h5>
+</div>
+
+<form asp-action="BulkCreate" method="post" id="bulkForm">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-4">
+        
+        <div class="col-lg-5">
+            <div class="card p-4">
+                <h6 class="mb-3 text-uppercase text-muted small">Film</h6>
+                <div class="mb-3">
+                    <select name="movieId" id="movieId" class="form-select" required>
+                        <option value="">- wybierz film -</option>
+                        @foreach (var m in (IEnumerable<SelectListItem>)ViewBag.Movies)
+                        { <option value="@m.Value">@m.Text</option> }
+                    </select>
+                </div>
+
+                <h6 class="mb-2 text-uppercase text-muted small">Kino (filtruje sale)</h6>
+                <div class="mb-3">
+                    <select id="cinemaSelect" class="form-select">
+                        <option value="">- wybierz kino -</option>
+                        @foreach (var c in (IEnumerable<SelectListItem>)ViewBag.Cinemas)
+                        { <option value="@c.Value">@c.Text</option> }
+                    </select>
+                </div>
+
+                <h6 class="mb-2 text-uppercase text-muted small">Domyślna sala dla wszystkich slotów</h6>
+                <div class="default-hall-bar d-flex gap-2 align-items-center">
+                    <select id="defaultHallSelect" class="form-select form-select-sm" disabled>
+                        <option value="">- najpierw wybierz kino -</option>
+                    </select>
+                    <button type="button" id="applyDefault" class="btn btn-sm btn-outline-secondary text-nowrap" disabled>
+                        Ustaw dla wszystkich
+                    </button>
+                </div>
+            </div>
+
+            <div class="card p-4 mt-3">
+                <h6 class="mb-3 text-uppercase text-muted small">Okres</h6>
+                <div class="row g-2 mb-1">
+                    <div class="col-6">
+                        <label class="form-label small">Od</label>
+                        <input type="text" name="dateFrom" id="dateFrom" class="form-control form-control-sm" readonly placeholder="Wybierz…" required />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Do</label>
+                        <input type="text" name="dateTo" id="dateTo" class="form-control form-control-sm" readonly placeholder="Wybierz…" required />
+                    </div>
+                </div>
+                <div class="text-muted mb-3" style="font-size:.72rem;">
+                    <i class="bi bi-lock-fill me-1" style="font-size:.65rem;"></i>Najwcześniej: <strong>@minDateLabel</strong>
+                </div>
+
+                <label class="form-label small">Wyklucz dni tygodnia</label>
+                <div class="d-flex gap-1 flex-wrap" id="dayToggles">
+                    @foreach (var (num, lbl) in new[]{(1,"Pon"),(2,"Wt"),(3,"Śr"),(4,"Czw"),(5,"Pt"),(6,"Sob"),(0,"Nd")})
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm day-btn" data-day="@num">@lbl</button>
+                    }
+                </div>
+                <div id="excludeInputs"></div>
+
+            </div>
+        </div>
+
+        
+        <div class="col-lg-7">
+            <div class="card p-4">
+                <h6 class="mb-3 text-uppercase text-muted small">Godziny</h6>
+
+                <div class="slot-header mb-1 px-1">
+                    <span class="text-muted small">Godzina</span>
+                    <span class="text-muted small">Audio</span>
+                    <span class="text-muted small">Sala</span>
+                    <span></span>
+                </div>
+
+                <div id="slotList"></div>
+
+                <button type="button" id="addSlot" class="btn btn-outline-secondary btn-sm mt-2">
+                    <i class="bi bi-plus-lg me-1"></i> Dodaj godzinę
+                </button>
+
+                <div class="text-muted mt-2" style="font-size:.75rem;">
+                    <i class="bi bi-info-circle me-1"></i>Godziny filtrowane są względem innych slotów tej samej sali (bufor 20 min). Kolizje z istniejącymi seansami sprawdzane są przy zapisie.
+                </div>
+
+                <div id="bulkCounter" class="mt-3">0 seansów zostanie dodanych</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 row g-3 mb-3">
+        <div class="col-md-6">
+            <div class="form-check">
+                <input type="checkbox" name="isPublished" id="isPublished" class="form-check-input" value="true" />
+                <label class="form-check-label" for="isPublished">
+                    <i class="bi bi-eye me-1"></i> Widoczne dla użytkowników od razu
+                </label>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small">Opublikuj w dniu (opcjonalnie)</label>
+            <input type="date" name="publishDate" class="form-control form-control-sm"
+                   title="Seanse staną się widoczne automatycznie w tym dniu" />
+            <div class="text-muted" style="font-size:.72rem;margin-top:.25rem;">Pozostaw puste jeśli używasz opcji powyżej.</div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-red" id="submitBtn" disabled>
+            <i class="bi bi-calendar-check me-1"></i> Utwórz wszystkie seanse
+        </button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Anuluj</a>
+    </div>
+</form>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+<script>
+(function () {
+    var allHalls       = @Html.Raw(ViewBag.HallsJson);
+    var audioOpts      = @Html.Raw(audioJson);
+    var movieDurations = @Html.Raw(ViewBag.MovieDurationsJson ?? "{}");
+
+    var cinemaSelect = document.getElementById('cinemaSelect');
+    var defHallSel   = document.getElementById('defaultHallSelect');
+    var applyBtn     = document.getElementById('applyDefault');
+    var slotList     = document.getElementById('slotList');
+    var counter      = document.getElementById('bulkCounter');
+    var submitBtn    = document.getElementById('submitBtn');
+    var excludeDiv   = document.getElementById('excludeInputs');
+    var excludedDays = new Set();
+    var currentCinema = '';
+
+    // --- Flatpickr dates ---
+    var fpFrom = flatpickr('#dateFrom', {
+        locale: 'pl', dateFormat: 'Y-m-d', minDate: '@minDate', disableMobile: true,
+        onChange: function (sel, dateStr) {
+            fpTo.set('minDate', dateStr || '@minDate');
+            updateCounter();
+        }
+    });
+    var fpTo = flatpickr('#dateTo', {
+        locale: 'pl', dateFormat: 'Y-m-d', minDate: '@minDate', disableMobile: true,
+        onChange: function () { updateCounter(); }
+    });
+
+    // --- Movie duration helper ---
+    function getMovieDuration() {
+        var id = document.getElementById('movieId').value;
+        return id ? (movieDurations[id] || 0) : 0;
+    }
+
+    // --- Time collision helpers ---
+    function timeToMin(t) {
+        var p = t.split(':');
+        return parseInt(p[0]) * 60 + parseInt(p[1]);
+    }
+
+    function timesCollide(t1, t2, dur) {
+        var m1 = timeToMin(t1), m2 = timeToMin(t2);
+        return m1 < m2 + dur + 20 && m2 < m1 + dur + 20;
+    }
+
+    // Rebuild time <select> for one row, given movie duration
+    function rebuildTimeSelect(row, dur) {
+        var hallId = row.querySelector('.hall-select').value;
+        var sel    = row.querySelector('.time-select');
+        var prev   = sel.value;
+
+        if (!hallId || !dur) {
+            sel.innerHTML = '<option value="">' + (!dur ? '- wybierz film -' : '- wybierz salę -') + '</option>';
+            sel.disabled = true;
+            return;
+        }
+
+        // Collect times already taken by other slots in same hall
+        var taken = [];
+        slotList.querySelectorAll('.slot-row').forEach(function (r) {
+            if (r === row) return;
+            if (r.querySelector('.hall-select').value !== hallId) return;
+            var t = r.querySelector('.time-select').value;
+            if (t) taken.push(t);
+        });
+
+        // Generate 15-min slots 08:00–23:45 excluding collisions
+        var available = [];
+        for (var h = 8; h <= 23; h++) {
+            for (var m = 0; m < 60; m += 15) {
+                var t = ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
+                var collides = taken.some(function (tk) { return timesCollide(t, tk, dur); });
+                if (!collides) available.push(t);
+            }
+        }
+
+        sel.innerHTML = available.length
+            ? '<option value="">- wybierz godzinę -</option>'
+            : '<option value="">Brak wolnych godzin</option>';
+        var restored = false;
+        available.forEach(function (t) {
+            var o = document.createElement('option');
+            o.value = t; o.textContent = t;
+            if (t === prev) { o.selected = true; restored = true; }
+            sel.appendChild(o);
+        });
+        sel.disabled = available.length === 0;
+        if (!restored) sel.value = '';
+    }
+
+    // Rebuild all slots at once (called on any change that affects availability)
+    function rebuildAllTimeSelects() {
+        var dur = getMovieDuration();
+        slotList.querySelectorAll('.slot-row').forEach(function (row) {
+            rebuildTimeSelect(row, dur);
+        });
+        updateCounter();
+    }
+
+    // --- Hall options fragment ---
+    function hallOptions(cinemaId, selectedId) {
+        var filtered = cinemaId
+            ? allHalls.filter(function (h) { return String(h.cinemaId) === String(cinemaId); })
+            : [];
+        var frag = document.createDocumentFragment();
+        var blank = document.createElement('option');
+        blank.value = ''; blank.textContent = filtered.length ? '- sala -' : '- wybierz kino -';
+        frag.appendChild(blank);
+        filtered.forEach(function (h) {
+            var o = document.createElement('option');
+            o.value = h.id; o.textContent = h.label;
+            if (selectedId && String(h.id) === String(selectedId)) o.selected = true;
+            frag.appendChild(o);
+        });
+        return frag;
+    }
+
+    // --- Cinema change ---
+    cinemaSelect.addEventListener('change', function () {
+        currentCinema = this.value;
+        var hasCinema = !!currentCinema;
+        defHallSel.innerHTML = '';
+        defHallSel.appendChild(hallOptions(currentCinema, null));
+        defHallSel.disabled = !hasCinema;
+        applyBtn.disabled = !hasCinema;
+        slotList.querySelectorAll('.hall-select').forEach(function (sel) {
+            var prev = sel.value;
+            sel.innerHTML = '';
+            sel.appendChild(hallOptions(currentCinema, prev));
+            sel.disabled = !hasCinema;
+        });
+        rebuildAllTimeSelects();
+    });
+
+    // --- Apply default hall ---
+    applyBtn.addEventListener('click', function () {
+        var hallId = defHallSel.value;
+        if (!hallId) return;
+        slotList.querySelectorAll('.hall-select').forEach(function (sel) { sel.value = hallId; });
+        rebuildAllTimeSelects();
+    });
+
+    // --- Day toggles ---
+    document.querySelectorAll('.day-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var day = parseInt(this.dataset.day);
+            if (excludedDays.has(day)) { excludedDays.delete(day); this.classList.remove('active'); }
+            else                       { excludedDays.add(day);    this.classList.add('active'); }
+            syncExclude();
+            updateCounter();
+        });
+    });
+    function syncExclude() {
+        excludeDiv.innerHTML = '';
+        excludedDays.forEach(function (d) {
+            var inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'excludeDays'; inp.value = d;
+            excludeDiv.appendChild(inp);
+        });
+    }
+
+    // --- Add slot ---
+    function makeAudioSelect() {
+        var sel = document.createElement('select');
+        sel.name = 'audios'; sel.className = 'form-select form-select-sm';
+        audioOpts.forEach(function (a) {
+            var o = document.createElement('option'); o.value = a.val; o.textContent = a.label;
+            sel.appendChild(o);
+        });
+        sel.addEventListener('change', updateCounter);
+        return sel;
+    }
+
+    function makeHallSelect() {
+        var sel = document.createElement('select');
+        sel.name = 'hallIds'; sel.className = 'form-select form-select-sm hall-select';
+        sel.disabled = !currentCinema;
+        sel.appendChild(hallOptions(currentCinema, null));
+        sel.addEventListener('change', function () { rebuildAllTimeSelects(); });
+        return sel;
+    }
+
+    function makeTimeSelect(defaultTime) {
+        var sel = document.createElement('select');
+        sel.name = 'times'; sel.className = 'form-select form-select-sm time-select';
+        sel.disabled = true;
+        var o = document.createElement('option'); o.value = ''; o.textContent = '- wybierz film -';
+        sel.appendChild(o);
+        if (defaultTime) sel.dataset.default = defaultTime;
+        sel.addEventListener('change', function () { rebuildAllTimeSelects(); });
+        return sel;
+    }
+
+    function addSlot(defaultTime, audioVal) {
+        var row = document.createElement('div');
+        row.className = 'slot-row';
+
+        var timeSel  = makeTimeSelect(defaultTime);
+        var audioSel = makeAudioSelect();
+        if (audioVal !== undefined) audioSel.value = audioVal;
+        var hallSel  = makeHallSelect();
+
+        var rm = document.createElement('button');
+        rm.type = 'button'; rm.className = 'btn btn-outline-danger btn-sm';
+        rm.innerHTML = '<i class="bi bi-x"></i>';
+        rm.addEventListener('click', function () { row.remove(); rebuildAllTimeSelects(); });
+
+        row.appendChild(timeSel);
+        row.appendChild(audioSel);
+        row.appendChild(hallSel);
+        row.appendChild(rm);
+        slotList.appendChild(row);
+        rebuildAllTimeSelects();
+    }
+
+    document.getElementById('addSlot').addEventListener('click', function () { addSlot(); });
+    document.getElementById('movieId').addEventListener('change', rebuildAllTimeSelects);
+
+    // Seed defaults
+    addSlot('13:00', 0);
+    addSlot('16:00', 1);
+    addSlot('19:00', 0);
+
+    // --- Counter ---
+    function countDays() {
+        var fEl = document.getElementById('dateFrom');
+        var tEl = document.getElementById('dateTo');
+        var f = new Date(fEl.value), t = new Date(tEl.value);
+        if (isNaN(f) || isNaN(t) || t < f) return 0;
+        var n = 0;
+        for (var d = new Date(f); d <= t; d.setDate(d.getDate() + 1))
+            if (!excludedDays.has(d.getDay())) n++;
+        return n;
+    }
+
+    function updateCounter() {
+        var days  = countDays();
+        var slots = Array.from(slotList.querySelectorAll('.slot-row')).filter(function (r) {
+            return r.querySelector('.time-select').value &&
+                   r.querySelector('.hall-select').value;
+        }).length;
+        var total    = days * slots;
+        var hasMovie = !!document.getElementById('movieId').value;
+        counter.textContent = total > 0
+            ? total + ' seansów zostanie dodanych (' + days + ' dni \xd7 ' + slots + ' slot\xf3w)'
+            : '0 seansów - uzupełnij film, daty, godziny i sale';
+        submitBtn.disabled = total === 0 || !hasMovie;
+    }
+
+    updateCounter();
+})();
+</script>
+    <partial name="_ValidationScriptsPartial" />
+}

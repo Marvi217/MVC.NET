@@ -1,0 +1,46 @@
+@model IEnumerable<CinePlex.Models.Marathon>
+@{
+    ViewData["Title"] = "Maratony filmowe";
+}
+
+<div class="container py-5">
+    <h2 class="mb-4">Maratony filmowe</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-collection-play" style="font-size:3rem;display:block;margin-bottom:1rem;"></i>
+            Brak aktywnych maratonów w tej chwili.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var m in Model)
+            {
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        @if (!string.IsNullOrWhiteSpace(m.PosterUrl))
+                        {
+                            <img src="@m.PosterUrl" class="card-img-top" style="object-fit:cover;height:220px;" />
+                        }
+                        <div class="card-body">
+                            <h5 class="card-title">@m.Name</h5>
+                            <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>@m.Hall?.Cinema?.Name</p>
+                            <p class="text-muted small mb-1"><i class="bi bi-calendar me-1"></i>@m.StartTime.ToString("dd.MM.yyyy HH:mm")</p>
+                            <p class="text-muted small mb-2"><i class="bi bi-film me-1"></i>@m.Screenings.Count filmów</p>
+                            @if (!string.IsNullOrWhiteSpace(m.Description))
+                            {
+                                <p class="card-text small">@(m.Description.Length > 100 ? m.Description[..100] + "…" : m.Description)</p>
+                            }
+                        </div>
+                        <div class="card-footer d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">@m.Price.ToString("C", new System.Globalization.CultureInfo("pl-PL"))</span>
+                            <a asp-action="Details" asp-route-id="@m.MarathonId" class="btn btn-orange btn-sm">Kup bilet</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

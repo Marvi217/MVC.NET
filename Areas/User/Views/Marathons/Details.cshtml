@@ -1,0 +1,148 @@
+@model CinePlex.Models.Marathon
+@using CinePlex.Models
+@{
+    ViewData["Title"] = Model.Name;
+    var layoutConfig = ViewBag.Layout as HallLayoutConfig;
+    var taken = ViewBag.TakenSeats as HashSet<int> ?? new HashSet<int>();
+    bool hasLayout = layoutConfig != null && layoutConfig.Rows.Count > 0;
+    int capacity = Model.Hall?.Capacity ?? 0;
+}
+
+<div class="container py-4">
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            @if (!string.IsNullOrWhiteSpace(Model.PosterUrl))
+            {
+                <img src="@Model.PosterUrl" class="img-fluid rounded" />
+            }
+        </div>
+        <div class="col-md-9">
+            <h2 class="mb-2">@Model.Name</h2>
+            <p class="text-muted"><i class="bi bi-geo-alt me-1"></i>@Model.Hall?.Cinema?.Name — Sala @Model.Hall?.Number, @Model.Hall?.Cinema?.City</p>
+            <p class="text-muted"><i class="bi bi-calendar me-1"></i>@Model.StartTime.ToString("dd.MM.yyyy")</p>
+            @if (!string.IsNullOrWhiteSpace(Model.Description))
+            {
+                <p>@Model.Description</p>
+            }
+            <div class="mb-3">
+                @foreach (var (s, i) in Model.Screenings.OrderBy(s => s.StartTime).Select((s, i) => (s, i + 1)))
+                {
+                    <div class="d-flex gap-3 py-1 border-bottom small">
+                        <span class="text-muted" style="min-width:30px;">@i.</span>
+                        <span class="fw-semibold">@s.Movie?.Title</span>
+                        <span class="text-muted">@s.StartTime.ToString("HH:mm") – @s.StartTime.AddMinutes(s.Movie?.Duration ?? 0).ToString("HH:mm")</span>
+                        <span class="text-muted">@s.Movie?.Duration min</span>
+                    </div>
+                }
+            </div>
+            <div class="fw-bold fs-5">Bilet: @Model.Price.ToString("C", new System.Globalization.CultureInfo("pl-PL"))</div>
+            <p class="text-muted small">To samo miejsce we wszystkich seansach maratonu.</p>
+        </div>
+    </div>
+
+    <h5 class="mb-3">Wybierz miejsce(a)</h5>
+    <div class="card p-4">
+        <div id="seatMapWrapper" style="overflow-x:auto;">
+            <div id="seatGrid" class="seat-grid">
+                <div class="screen-bar">SCREEN</div>
+                @if (hasLayout)
+                {
+                    int cursor = 0;
+                    bool revNum = layoutConfig!.ReverseNumbering;
+                    var lastRow = layoutConfig!.Rows.LastOrDefault();
+                    foreach (var row in layoutConfig!.Rows)
+                    {
+                        bool isLastRow = row == lastRow;
+                        bool showAisles = !isLastRow || row.HasPassageAfter;
+                        <div class="seat-row @(row.ExtraSpacingBefore ? "mt-4" : "")">
+                            <span class="row-label">@row.Label</span>
+                            @if (layoutConfig.AisleAfterColumns.Contains(-1))
+                            {
+                                <span class="aisle-gap @(showAisles ? "" : "aisle-gap--invisible")"></span>
+                            }
+                            @for (int c = 0; c < row.SeatCount; c++)
+                            {
+                                int seatNum = cursor + c + 1;
+                                bool isTaken = taken.Contains(seatNum);
+                                int dn = revNum ? (row.SeatCount - c) : (c + 1);
+                                <button type="button"
+                                        class="seat-btn @(row.IsSofa ? "sofa" : "") @(isTaken ? "taken" : "")"
+                                        data-seat="@seatNum"
+                                        data-label="@row.Label@dn"
+                                        @(isTaken ? "disabled" : "")>
+                                    @dn
+                                </button>
+                                @if (layoutConfig.AisleAfterColumns.Contains(row.IsSofa ? c * 2 : c) ||
+                                     (row.IsSofa && layoutConfig.AisleAfterColumns.Contains(c * 2 + 1)))
+                                {
+                                    <span class="aisle-gap @(showAisles ? "" : "aisle-gap--invisible")"></span>
+                                }
+                            }
+                            <span class="row-label">@row.Label</span>
+                        </div>
+                        @if (isLastRow && row.HasPassageAfter)
+                        {
+                            <div class="hall-back-aisle"></div>
+                        }
+                        cursor += row.SeatCount;
+                    }
+                }
+                else
+                {
+                    int perRow = 10;
+                    int rowCount = (int)Math.Ceiling(capacity / (double)perRow);
+                    for (int r = 0; r < rowCount; r++)
+                    {
+                        var rowLabel = ((char)('A' + r)).ToString();
+                        <div class="seat-row">
+                            <span class="row-label">@rowLabel</span>
+                            @for (int c = 0; c < perRow; c++)
+                            {
+                                int seatNum = r * perRow + c + 1;
+                                if (seatNum > capacity) break;
+                                bool isTaken = taken.Contains(seatNum);
+                                <button type="button"
+                                        class="seat-btn @(isTaken ? "taken" : "")"
+                                        data-seat="@seatNum"
+                                        data-label="@rowLabel@(c + 1)"
+                                        @(isTaken ? "disabled" : "")>
+                                    @(c + 1)
+                                </button>
+                            }
+                            <span class="row-label">@rowLabel</span>
+                        </div>
+                    }
+                }
+            </div>
+            <div class="seat-legend mt-3 mb-1">
+                <span class="d-flex align-items-center gap-2 small text-muted"><span style="background:#2e8b57;display:inline-block;width:14px;height:14px;border-radius:3px;"></span> Wolne</span>
+                <span class="d-flex align-items-center gap-2 small text-muted"><span style="background:var(--yellow);display:inline-block;width:14px;height:14px;border-radius:3px;"></span> Wybrane</span>
+                <span class="d-flex align-items-center gap-2 small text-muted"><span style="background:#5a1a1a;display:inline-block;width:14px;height:14px;border-radius:3px;"></span> Zajęte</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmSection" class="mt-4" style="display:none;"
+         data-marathon-id="@Model.MarathonId"
+         data-price="@Model.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+        <hr style="border-color:var(--border);" />
+        <div id="seatWarning" class="alert mb-3" style="display:none;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.3);border-radius:8px;color:#f87171;font-size:.87rem;">
+            <i class="bi bi-x-circle me-2"></i>
+            <strong>Niedozwolony wybór miejsc</strong> — na krawędzi rzędu zostałoby dokładnie 1 wolne miejsce.
+            Wybierz przynajmniej 2 wolne miejsca po lewej lub prawej stronie swojego wyboru, albo dobierz skrajne miejsca.
+        </div>
+        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div>
+                <div class="text-muted small">Wybrane miejsca</div>
+                <div class="reservation-code" style="font-size:1.4rem;letter-spacing:.15rem;" id="seatDisplay"></div>
+                <div class="text-muted small mt-1" id="priceDisplay"></div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" id="clearSeats" class="btn btn-outline-secondary">Wyczyść</button>
+                <button type="button" id="checkoutBtn" class="btn btn-orange btn-lg">
+                    <i class="bi bi-credit-card me-1"></i> Kup bilety
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

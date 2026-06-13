@@ -1,0 +1,83 @@
+@model CinePlex.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<style>
+    .auth-page {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        padding: 2rem 1rem;
+    }
+    .auth-card {
+        width: 100%;
+        max-width: 540px;
+        position: relative;
+        z-index: 1;
+        padding: 2.5rem;
+    }
+    .ul-wrap { position: relative; }
+    .form-label-ul { margin-bottom: .35rem; display: block; }
+    .auth-hr { margin: 1.5rem 0; }
+</style>
+
+<div class="auth-page">
+
+    <div class="auth-card">
+        <div class="text-center mb-4">
+            <a class="auth-logo" asp-controller="Home" asp-action="Index">CINE<span class="accent">PLEX</span></a>
+            <p class="text-muted small mt-1 mb-0">Create your account</p>
+        </div>
+
+        <form asp-action="Register" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+            <div class="row g-3">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="FirstName" class="form-label-ul"></label>
+                    <div class="ul-wrap">
+                        <input asp-for="FirstName" class="form-control form-control-ul" />
+                    </div>
+                    <span asp-validation-for="FirstName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="LastName" class="form-label-ul"></label>
+                    <div class="ul-wrap">
+                        <input asp-for="LastName" class="form-control form-control-ul" />
+                    </div>
+                    <span asp-validation-for="LastName" class="text-danger small"></span>
+                </div>
+                <div class="col-12 mb-3">
+                    <label asp-for="Email" class="form-label-ul"></label>
+                    <div class="ul-wrap">
+                        <input asp-for="Email" class="form-control form-control-ul" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Password" class="form-label-ul"></label>
+                    <div class="ul-wrap">
+                        <input asp-for="Password" type="password" class="form-control form-control-ul" />
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label-ul"></label>
+                    <div class="ul-wrap">
+                        <input asp-for="ConfirmPassword" type="password" class="form-control form-control-ul" />
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-red w-100 btn-lg mt-3 btn-shimmer">Create Account</button>
+        </form>
+
+        <hr class="auth-hr" />
+        <p class="text-center small mb-0 text-muted">Already have an account? <a asp-action="Login">Login</a></p>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

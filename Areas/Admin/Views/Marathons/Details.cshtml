@@ -1,0 +1,81 @@
+@model CinePlex.Models.Marathon
+@{
+    ViewData["Title"] = Model.Name;
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">@Model.Name</h4>
+        <div class="text-muted small">@Model.Hall?.Cinema?.Name — Sala @Model.Hall?.Number — @Model.StartTime.ToString("dd.MM.yyyy HH:mm")</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.MarathonId" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil me-1"></i>Edytuj</a>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Wróć</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card p-4 mb-4">
+            <h6 class="mb-3">Plan seansów</h6>
+            <table class="table table-sm mb-0">
+                <thead><tr><th>#</th><th>Film</th><th>Start</th><th>Koniec</th><th>Czas</th></tr></thead>
+                <tbody>
+                    @foreach (var (s, i) in Model.Screenings.OrderBy(s => s.StartTime).Select((s, i) => (s, i + 1)))
+                    {
+                        <tr>
+                            <td>@i</td>
+                            <td>@s.Movie?.Title</td>
+                            <td>@s.StartTime.ToString("HH:mm")</td>
+                            <td>@s.StartTime.AddMinutes(s.Movie?.Duration ?? 0).ToString("HH:mm")</td>
+                            <td>@s.Movie?.Duration min</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card p-4">
+            <h6 class="mb-3">Rezerwacje (@Model.Reservations.Count)</h6>
+            @if (!Model.Reservations.Any())
+            {
+                <p class="text-muted mb-0">Brak rezerwacji.</p>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Kod</th><th>Miejsce</th><th>Użytkownik</th><th>Status</th><th>Cena</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in Model.Reservations.OrderBy(r => r.PurchaseDate))
+                        {
+                            <tr>
+                                <td><code>@r.ReservationCode</code></td>
+                                <td>@r.SeatRow@r.SeatNumber</td>
+                                <td>@(r.AppUser?.Email ?? r.GuestName ?? "—")</td>
+                                <td>@r.Status</td>
+                                <td>@r.PricePaid.ToString("C", new System.Globalization.CultureInfo("pl-PL"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4">
+            <dl class="mb-0">
+                <dt>Cena biletu</dt>
+                <dd>@Model.Price.ToString("C", new System.Globalization.CultureInfo("pl-PL"))</dd>
+                <dt>Aktywny</dt>
+                <dd>@(Model.IsActive ? "Tak" : "Nie")</dd>
+                <dt>Opis</dt>
+                <dd>@(Model.Description ?? "—")</dd>
+                @if (!string.IsNullOrWhiteSpace(Model.PosterUrl))
+                {
+                    <dt>Plakat</dt>
+                    <dd><img src="@Model.PosterUrl" style="max-width:100%;border-radius:6px;" /></dd>
+                }
+            </dl>
+        </div>
+    </div>
+</div>

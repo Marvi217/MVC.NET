@@ -1,0 +1,184 @@
+﻿@model IEnumerable<Screening>
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Seanse";
+    int?     cid       = ViewBag.CinemaId;
+    DateTime weekStart = ViewBag.WeekStart;
+    DateTime weekEnd   = ViewBag.WeekEnd;
+    var cinemas = ViewBag.Cinemas as IEnumerable<Cinema> ?? Enumerable.Empty<Cinema>();
+
+    string WeekLink(DateTime ws, int? c) =>
+        Url.Action("Index", new { date = ws.ToString("yyyy-MM-dd"), cinemaId = c })!;
+
+    var byDay = Model
+        .GroupBy(s => s.StartTime.Date)
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    string[] plDays = { "Niedziela","Poniedziałek","Wtorek","Środa","Czwartek","Piątek","Sobota" };
+    string[] plMonths = { "","Sty","Lut","Mar","Kwi","Maj","Cze","Lip","Sie","Wrz","Paź","Lis","Gru" };
+}
+
+<style>
+    .cinema-tabs { display:flex; gap:.4rem; flex-wrap:wrap; }
+    .cinema-tab {
+        padding:.4rem 1.1rem;
+        text-decoration:none; white-space:nowrap;
+    }
+    .week-nav { display:flex; align-items:center; gap:1rem; }
+    .week-label { min-width:200px; text-align:center; }
+    .week-btn { padding:.3rem .85rem; text-decoration:none; }
+    .day-block { margin-bottom:1.5rem; }
+    .day-header {
+        padding:.4rem 0;
+        margin-bottom:.5rem; display:flex; align-items:center; gap:.75rem;
+    }
+    .day-header .day-num { line-height:1; }
+    .hall-group { margin-bottom:.6rem; }
+    .hall-label {
+        padding:.2rem .5rem; display:inline-block; margin-bottom:.3rem;
+    }
+    .srow {
+        display:grid; grid-template-columns:54px 1fr auto auto auto; gap:.5rem 1rem;
+        align-items:center; padding:.3rem .5rem;
+    }
+    .srow-seats { white-space:nowrap; }
+    .badge-audio { padding:.15rem .5rem; white-space:nowrap; }
+    .empty-week { text-align:center; padding:4rem 0; }
+    .empty-week i { display:block; margin-bottom:.75rem; }
+</style>
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div>
+        <h4 class="mb-2">Seanse</h4>
+        <div class="cinema-tabs">
+            <a href="@WeekLink(weekStart, null)" class="cinema-tab @(cid == null ? "active" : "")">Wszystkie kina</a>
+            @foreach (var c in cinemas)
+            {
+                <a href="@WeekLink(weekStart, c.CinemaId)"
+                   class="cinema-tab @(cid == c.CinemaId ? "active" : "")">@c.Name</a>
+            }
+        </div>
+    </div>
+    <div class="d-flex gap-2 align-items-start">
+        <a asp-action="BulkCreate" class="btn btn-outline-secondary btn-sm"><i class="bi bi-calendar-range me-1"></i> Masowe planowanie</a>
+        <a asp-action="Create" class="btn btn-red btn-sm"><i class="bi bi-plus-circle me-1"></i> Nowy seans</a>
+    </div>
+</div>
+
+<div class="week-nav mb-4">
+    <a href="@WeekLink(weekStart.AddDays(-7), cid)" class="week-btn">&#8592; Poprzedni</a>
+    <span class="week-label">
+        @weekStart.Day @plMonths[weekStart.Month] &ndash; @weekEnd.AddDays(-1).Day @plMonths[weekEnd.AddDays(-1).Month] @weekStart.Year
+    </span>
+    <a href="@WeekLink(weekStart.AddDays(7), cid)" class="week-btn">Następny &#8594;</a>
+    @if (weekStart > DateTime.Today.AddDays(-7) && weekStart <= DateTime.Today.AddDays(7))
+    {
+        <a href="@WeekLink(DateTime.Today, cid)" class="week-btn" style="border-color:rgba(229,9,20,.4);color:var(--red);">Dziś</a>
+    }
+</div>
+
+@if (!byDay.Any())
+{
+    <div class="empty-week">
+        <i class="bi bi-calendar-x"></i>
+        <p>Brak seansów w tym tygodniu.</p>
+        <a asp-action="BulkCreate" class="btn btn-outline-secondary btn-sm mt-2">Zaplanuj seanse</a>
+    </div>
+}
+else
+{
+    @for (var day = weekStart; day < weekEnd; day = day.AddDays(1))
+    {
+        var dayScreenings = byDay.FirstOrDefault(g => g.Key == day.Date);
+        bool isToday = day.Date == DateTime.Today;
+        bool hasScreenings = dayScreenings != null && dayScreenings.Any();
+
+        <div class="day-block">
+            <div class="day-header @(isToday ? "today" : "")">
+                <span class="day-num">@day.Day</span>
+                <span>@plDays[(int)day.DayOfWeek]@(isToday ? " - dziś" : "")</span>
+                @if (hasScreenings)
+                {
+                    <span style="font-size:.75rem;color:#555;margin-left:auto;">@dayScreenings!.Count() seansów</span>
+                }
+            </div>
+
+            @if (!hasScreenings)
+            {
+                <div style="color:#3a3a3a;font-size:.82rem;padding:.2rem .5rem;">Brak seansów</div>
+            }
+            else
+            {
+                var byHall = dayScreenings!
+                    .GroupBy(s => s.HallId)
+                    .OrderBy(g => g.First().Hall?.Number);
+
+                @foreach (var hallGroup in byHall)
+                {
+                    var h = hallGroup.First().Hall;
+                    var hallLabel = $"Sala {h?.Number} · {HallTypeLabel(h?.Type ?? HallType.Standard)}";
+                    var cinemaLabel = cid == null ? $" - {h?.Cinema?.Name}" : "";
+
+                    <div class="hall-group">
+                        <span class="hall-label">@hallLabel@cinemaLabel</span>
+                        @{
+                            var standaloneS = hallGroup.Where(s => s.MarathonId == null).OrderBy(s => s.StartTime).ToList();
+                            var marathonGroups = hallGroup
+                                .Where(s => s.MarathonId != null)
+                                .GroupBy(s => s.MarathonId)
+                                .Select(g => g.OrderBy(s => s.StartTime).ToList())
+                                .OrderBy(g => g[0].StartTime)
+                                .ToList();
+                        }
+                        @foreach (var s in standaloneS)
+                        {
+                            int booked = s.Reservations.Count(r => r.Status != ReservationStatus.Cancelled);
+                            <div class="srow">
+                                <span class="srow-time">@s.StartTime.ToString("HH:mm")</span>
+                                <span class="srow-movie">@s.Movie?.Title</span>
+                                <span class="badge-audio">@(s.AudioVersion switch { AudioVersion.Dubbed => "Dubbing", AudioVersion.Subtitled => "Napisy", _ => "Oryg." })</span>
+                                <span class="srow-seats">@booked/@h?.Capacity</span>
+                                <span class="d-flex gap-1">
+                                    @if (s.StartTime >= DateTime.Today.AddDays(7))
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@s.ScreeningId" class="btn btn-sm btn-outline-secondary" style="padding:.15rem .5rem;"><i class="bi bi-pencil"></i></a>
+                                    }
+                                    <a asp-action="Delete" asp-route-id="@s.ScreeningId" class="btn btn-sm btn-outline-danger" style="padding:.15rem .5rem;"><i class="bi bi-trash"></i></a>
+                                </span>
+                            </div>
+                        }
+                        @foreach (var mg in marathonGroups)
+                        {
+                            var mFirst = mg[0];
+                            var marathonName = mFirst.Marathon?.Name ?? "Maraton";
+                            int mBooked = mg.Sum(s => s.Reservations.Count(r => r.Status != ReservationStatus.Cancelled));
+                            <div class="srow">
+                                <span class="srow-time">@mFirst.StartTime.ToString("HH:mm")</span>
+                                <span class="srow-movie"><i class="bi bi-collection-play me-1" style="color:#ffa500;"></i>@marathonName <span class="text-muted small">(@mg.Count filmów)</span></span>
+                                <span class="badge-audio">Maraton</span>
+                                <span class="srow-seats">@mBooked/@h?.Capacity</span>
+                                <span class="d-flex gap-1">
+                                    <a asp-area="Admin" asp-controller="Marathons" asp-action="Details"
+                                       asp-route-id="@mFirst.MarathonId"
+                                       class="btn btn-sm btn-outline-secondary" style="padding:.15rem .5rem;" title="Szczegóły maratonu">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+}
+
+@functions {
+    static string HallTypeLabel(HallType t) => t switch {
+        HallType.ThreeD => "3D",
+        HallType.IMAX   => "IMAX",
+        HallType.FourD  => "4DX",
+        _               => "Standard"
+    };
+}

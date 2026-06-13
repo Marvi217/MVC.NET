@@ -1,0 +1,68 @@
+@model AppUser
+@{
+    ViewData["Title"] = Model.FullName;
+    var roles = ViewBag.Roles as IList<string> ?? new List<string>();
+    var currentRole = roles.FirstOrDefault() ?? "User";
+}
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card p-3">
+            <h4>@Model.FullName</h4>
+            <table class="table table-dark-cinema mb-0">
+                <tr><th>Email</th><td>@Model.Email</td></tr>
+                <tr><th>Registered</th><td>@Model.RegisteredAt.ToString("yyyy-MM-dd")</td></tr>
+                <tr><th>Role</th><td><span class="badge bg-secondary">@currentRole</span></td></tr>
+                <tr><th>Status</th><td>@if(Model.IsBlocked){
+                <span class="badge-status cancelled">Blocked</span>
+                                }else
+                {
+
+                    <span class="badge-status confirmed">Active</span>
+                }
+</td></tr>
+                <tr><th>Reservations</th><td>@(Model.Reservations?.Count ?? 0)</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card p-3 mb-3">
+            <h5>Change Role</h5>
+            <form asp-action="ChangeRole" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
+                <select name="role" class="form-select">
+                    <option value="User" selected="@(currentRole == "User")">User</option>
+                    <option value="Admin" selected="@(currentRole == "Admin")">Admin</option>
+                </select>
+                <button type="submit" class="btn btn-red">Update</button>
+            </form>
+        </div>
+        <div class="card p-3">
+            <h5>@(Model.IsBlocked ? "Unblock" : "Block") User</h5>
+            <form asp-action="ToggleBlock" asp-route-id="@Model.Id" method="post">
+                <button type="submit" class="btn @(Model.IsBlocked ? "btn-outline-success" : "btn-outline-danger") w-100">
+                    <i class="bi @(Model.IsBlocked ? "bi-unlock" : "bi-lock")"></i> @(Model.IsBlocked ? "Unblock" : "Block")
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+@if (Model.Reservations != null && Model.Reservations.Any())
+{
+    <div class="card p-3 mt-3">
+        <h5>Reservations</h5>
+        <table class="table table-dark-cinema mb-0">
+            <thead><tr><th>Code</th><th>Movie</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach (var r in Model.Reservations)
+                {
+                    <tr>
+                        <td>@r.ReservationCode</td>
+                        <td>@r.Screening?.Movie?.Title</td>
+                        <td>@r.Screening?.StartTime.ToString("MMM d · HH:mm")</td>
+                        <td><span class="badge-status @r.Status.ToString().ToLower()">@r.Status</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+<div class="mt-3"><a asp-action="Index" class="btn btn-outline-secondary">Back</a></div>

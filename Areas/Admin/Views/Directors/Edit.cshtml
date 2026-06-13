@@ -1,0 +1,21 @@
+@model Director
+@{
+    ViewData["Title"] = "Edit Director";
+}
+<div class="card p-4">
+    <h3 class="mb-4">Edit Director</h3>
+    <form asp-action="Edit" method="post">
+        <input type="hidden" asp-for="DirectorId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+        <div class="row g-3">
+            <div class="col-md-6"><label asp-for="FirstName" class="form-label"></label><input asp-for="FirstName" class="form-control" /></div>
+            <div class="col-md-6"><label asp-for="LastName" class="form-label"></label><input asp-for="LastName" class="form-control" /></div>
+            <div class="col-md-6"><label asp-for="Nationality" class="form-label"></label><input asp-for="Nationality" class="form-control" /></div>
+            <div class="col-12"><label asp-for="Biography" class="form-label"></label><textarea asp-for="Biography" rows="4" class="form-control"></textarea></div>
+        </div>
+        <div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-red"><i class="bi bi-check-circle"></i> Save</button><a asp-action="Index" class="btn btn-outline-secondary">Cancel</a></div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

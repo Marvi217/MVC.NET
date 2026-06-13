@@ -1,0 +1,272 @@
+@model CinePlex.ViewModels.RepertoireViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Repertuar";
+    var pl = new CultureInfo("pl-PL");
+    string HallColor(string label) => label switch
+    {
+        "IMAX" => "#00cfff",
+        "3D"   => "#a78bfa",
+        "4DX"  => "#fb923c",
+        _      => "#94a3b8",
+    };
+}
+
+<style>
+    .rep-filters select {
+        padding: .38rem .8rem;
+        cursor: pointer;
+    }
+    .movie-row {
+        display: flex;
+        gap: 1.25rem;
+        padding: 1.4rem 0;
+    }
+    .movie-poster {
+        flex-shrink: 0;
+        width: 80px;
+        height: 120px;
+        object-fit: cover;
+    }
+    .movie-poster-ph {
+        flex-shrink: 0;
+        width: 80px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .hall-group { margin-bottom: .65rem; }
+    .hall-label { margin-bottom: .4rem; }
+    .time-slots { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+    .time-btn {
+        padding: .3rem .72rem;
+        display: inline-block;
+        text-decoration: none;
+    }
+    .time-btn.soldout {
+        pointer-events: none;
+    }
+    .no-screenings { text-align: center; padding: 4rem 0; }
+    .cal-wrap { margin-bottom: 1.5rem; }
+    .cal-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .6rem; }
+    .cal-nav { background: none; border: none; color: #6c757d; font-size: 1.1rem; cursor: pointer; padding: .1rem .4rem; }
+    .cal-nav:hover { color: #212529; }
+    .cal-title { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: #6c757d; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .25rem; max-width: 320px; }
+    .cal-dh { text-align: center; font-size: .65rem; color: #6c757d; padding: .1rem 0; text-transform: uppercase; }
+    .cal-day {
+        text-align: center; font-size: .75rem; border-radius: 4px;
+        padding: .25rem .1rem; min-width: 0;
+    }
+    .cal-day.empty { visibility: hidden; }
+    .cal-day.no-show { color: #ccc; cursor: default; }
+    .cal-day.no-show.past { opacity: .5; }
+    .cal-day.has-show {
+        background: #f1f3f5;
+        cursor: pointer;
+        color: #212529;
+        border: 1px solid #adb5bd;
+        font-weight: 600;
+        text-decoration: none;
+        display: block;
+    }
+    .cal-day.has-show:hover {
+        background: #dee2e6;
+        border-color: #6c757d;
+        color: #000;
+    }
+    .cal-day.has-show.selected {
+        background: #e50914;
+        color: #fff;
+        border-color: transparent;
+        font-weight: 700;
+    }
+    .cal-day.today:not(.selected) {
+        box-shadow: 0 0 0 2px #f5c518;
+    }
+</style>
+
+<div class="container py-4">
+
+    
+    <h1 class="rep-header">
+        REPERTUAR@(Model.SelectedCinema != null ? $" – {Model.SelectedCinema.Name.ToUpper()}" : "")
+    </h1>
+
+
+    <div class="cal-wrap mt-3">
+        <div class="cal-header">
+            <button class="cal-nav" id="calPrev">&#8249;</button>
+            <span class="cal-title" id="calTitle"></span>
+            <button class="cal-nav" id="calNext">&#8250;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-start justify-content-end gap-3 mt-3">
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            @if (Model.SelectedHallType.HasValue)
+            {
+                var clearUrl = Url.Action("Index", "Screenings", new {
+                    cinemaId = Model.SelectedCinema?.CinemaId,
+                    movieId  = Model.SelectedMovieId,
+                    date     = Model.SelectedDate.ToString("yyyy-MM-dd")
+                });
+                <a href="@clearUrl" class="day-btn active">
+                    @(Model.SelectedHallType.Value switch { HallType.FourD => "4DX", HallType.ThreeD => "3D", HallType.IMAX => "IMAX", _ => Model.SelectedHallType.ToString() })
+                    &times;
+                </a>
+            }
+            <form method="get" class="d-flex gap-2 rep-filters">
+                <input type="hidden" name="date" value="@Model.SelectedDate.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="cinemaId" value="@Model.SelectedCinema?.CinemaId" />
+                <input type="hidden" name="hallType" value="@Model.SelectedHallType?.ToString()" />
+                <select name="movieId" onchange="this.form.submit()">
+                    <option value="">Wszystkie filmy</option>
+                    @foreach (var m in Model.Movies)
+                    {
+                        <option value="@m.MovieId" selected="@(m.MovieId == Model.SelectedMovieId ? "selected" : null)">@m.Title</option>
+                    }
+                </select>
+            </form>
+        </div>
+    </div>
+
+    
+    <div class="rep-date-label">
+        @Model.SelectedDate.ToString("dddd dd/MM/yyyy", pl).ToUpper()
+    </div>
+
+    
+    <div class="mt-3">
+        @if (!Model.Groups.Any())
+        {
+            <div class="no-screenings">
+                <i class="bi bi-calendar-x" style="font-size:2.5rem;"></i>
+                <p class="mt-3">Brak seansów na wybrany dzień.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var group in Model.Groups)
+            {
+                <div class="movie-row">
+                    
+                    @if (!string.IsNullOrEmpty(group.Movie.PosterUrl))
+                    {
+                        <img src="@group.Movie.PosterUrl" alt="@group.Movie.Title"
+                             class="movie-poster" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="movie-poster-ph"><i class="bi bi-film"></i></div>
+                    }
+
+                    
+                    <div class="flex-grow-1 min-w-0">
+                        <a asp-controller="Movies" asp-action="Details"
+                           asp-route-id="@group.Movie.MovieId" class="movie-title d-block">
+                            @group.Movie.Title.ToUpper()
+                        </a>
+                        <div class="movie-meta">
+                            <i class="bi bi-info-circle"></i>
+                            @group.Movie.Genre &nbsp;|&nbsp; @group.Movie.Duration min
+                        </div>
+
+                        @foreach (var hg in group.HallGroups)
+                        {
+                            <div class="hall-group">
+                                <div class="hall-label" style="color:@HallColor(hg.HallTypeLabel)">
+                                    @hg.HallTypeLabel
+                                </div>
+                                <div class="time-slots">
+                                    @foreach (var slot in hg.Slots)
+                                    {
+                                        <a asp-controller="Screenings" asp-action="Details"
+                                           asp-route-id="@slot.ScreeningId"
+                                           class="time-btn @(slot.SoldOut ? "soldout" : "")">
+                                            @slot.StartTime.ToString("HH:mm")
+                                        </a>
+                                    }
+                                    <span class="audio-lbl">@hg.AudioLabel</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var cinemaId    = '@(Model.SelectedCinema?.CinemaId.ToString() ?? "")';
+    var selectedDay = '@Model.SelectedDate.ToString("yyyy-MM-dd")';
+    var today       = new Date().toISOString().slice(0, 10);
+    var baseUrl     = '@Url.Action("Index", "Screenings")';
+    var curYear, curMonth;
+
+    var selDate = new Date(selectedDay);
+    curYear  = selDate.getFullYear();
+    curMonth = selDate.getMonth() + 1;
+
+    var dayHeaders = ['Pn','Wt','Śr','Cz','Pt','So','Nd'];
+    var monthNames = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+                      'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+    var grid  = document.getElementById('calGrid');
+    var title = document.getElementById('calTitle');
+
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function render(availSet) {
+        title.textContent = monthNames[curMonth - 1] + ' ' + curYear;
+        var first = new Date(curYear, curMonth - 1, 1);
+        var dow = (first.getDay() + 6) % 7;
+        var daysInMonth = new Date(curYear, curMonth, 0).getDate();
+
+        var html = dayHeaders.map(function(d) { return '<div class="cal-dh">' + d + '</div>'; }).join('');
+        for (var i = 0; i < dow; i++) html += '<div class="cal-day empty"></div>';
+        for (var d = 1; d <= daysInMonth; d++) {
+            var ds = curYear + '-' + pad(curMonth) + '-' + pad(d);
+            var has = availSet.has(ds);
+            var isSel = ds === selectedDay;
+            var isPast = ds < today;
+            var isToday = ds === today;
+            if (has && !isPast) {
+                var cls2 = 'cal-day has-show' + (isSel ? ' selected' : '') + (isToday ? ' today' : '');
+                var href2 = baseUrl + '?cinemaId=' + cinemaId + '&date=' + ds;
+                html += '<a href="' + href2 + '" class="' + cls2 + '">' + d + '</a>';
+            } else {
+                var cls2 = 'cal-day no-show' + (isPast ? ' past' : '') + (isToday ? ' today' : '');
+                html += '<div class="' + cls2 + '">' + d + '</div>';
+            }
+        }
+        grid.innerHTML = html;
+    }
+
+    function load(year, month) {
+        var url = '/Screenings/AvailableDays?year=' + year + '&month=' + month;
+        if (cinemaId) url += '&cinemaId=' + cinemaId;
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(days) { render(new Set(days)); })
+            .catch(function() { render(new Set()); });
+    }
+
+    document.getElementById('calPrev').addEventListener('click', function() {
+        curMonth--; if (curMonth < 1) { curMonth = 12; curYear--; }
+        load(curYear, curMonth);
+    });
+    document.getElementById('calNext').addEventListener('click', function() {
+        curMonth++; if (curMonth > 12) { curMonth = 1; curYear++; }
+        load(curYear, curMonth);
+    });
+
+    load(curYear, curMonth);
+})();
+</script>
+}

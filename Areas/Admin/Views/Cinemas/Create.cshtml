@@ -1,0 +1,22 @@
+@model Cinema
+@{
+    ViewData["Title"] = "New Cinema";
+}
+<div class="card p-4">
+    <h3 class="mb-4">New Cinema</h3>
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+        <div class="row g-3">
+            <div class="col-md-6"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control" /><span asp-validation-for="Name" class="text-danger small"></span></div>
+            <div class="col-md-6"><label asp-for="City" class="form-label"></label><input asp-for="City" class="form-control" /></div>
+            <div class="col-12"><label asp-for="Address" class="form-label"></label><input asp-for="Address" class="form-control" /></div>
+            <div class="col-md-6"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" /></div>
+            <div class="col-md-6"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" /></div>
+            <div class="col-12"><label asp-for="Description" class="form-label"></label><textarea asp-for="Description" rows="3" class="form-control"></textarea></div>
+        </div>
+        <div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-red"><i class="bi bi-check-circle"></i> Save</button><a asp-action="Index" class="btn btn-outline-secondary">Cancel</a></div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

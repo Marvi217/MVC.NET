@@ -1,0 +1,84 @@
+@model IEnumerable<CinePlex.Models.Movie>
+@{
+    ViewData["Title"] = "Wkrótce w kinach";
+}
+
+<style>
+    .cs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+    }
+    .cs-card {
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    a.cs-card { text-decoration: none; }
+    .cs-poster {
+        width: 100%;
+        aspect-ratio: 2/3;
+        object-fit: cover;
+    }
+    .cs-poster-ph {
+        width: 100%;
+        aspect-ratio: 2/3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .cs-body { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; gap: .4rem; }
+    .cs-date { margin-top: auto; padding-top: .5rem; }
+    .cs-trailer-btn {
+        display: inline-flex; align-items: center; gap: .3rem;
+        padding: .28rem .65rem; text-decoration: none;
+        width: fit-content;
+    }
+    .no-coming { text-align: center; padding: 5rem 0; }
+</style>
+
+<div class="container py-4">
+    <h1 class="cs-header">WKRÓTCE W KINACH</h1>
+    <p class="text-muted mb-4">Nadchodzące premiery</p>
+
+    @if (!Model.Any())
+    {
+        <div class="no-coming">
+            <i class="bi bi-camera-reels" style="font-size:3rem;"></i>
+            <p class="mt-3">Brak nadchodzących premier.</p>
+        </div>
+    }
+    else
+    {
+        <div class="cs-grid">
+            @foreach (var movie in Model)
+            {
+                <a asp-action="Details" asp-route-id="@movie.MovieId" class="cs-card">
+                    @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                    {
+                        <img src="@movie.PosterUrl" alt="@movie.Title" class="cs-poster" loading="lazy" />
+                    }
+                    else
+                    {
+                        <div class="cs-poster-ph"><i class="bi bi-film"></i></div>
+                    }
+                    <div class="cs-body">
+                        <div class="cs-title">@movie.Title.ToUpper()</div>
+                        <div class="cs-meta">@movie.Genre &nbsp;·&nbsp; @movie.Duration min</div>
+                        @if (!string.IsNullOrEmpty(movie.TrailerUrl))
+                        {
+                            <span class="cs-trailer-btn">
+                                <i class="bi bi-play-circle-fill"></i> Zwiastun
+                            </span>
+                        }
+                        <div class="cs-date">
+                            <i class="bi bi-calendar-event"></i>
+                            @movie.ReleaseDate.ToString("dd.MM.yyyy")
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+

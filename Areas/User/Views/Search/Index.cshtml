@@ -1,0 +1,56 @@
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Wyniki wyszukiwania";
+    var q       = ViewBag.Query as string ?? "";
+    var movies  = ViewBag.Movies  as IEnumerable<Movie>  ?? Enumerable.Empty<Movie>();
+    var cinemas = ViewBag.Cinemas as IEnumerable<Cinema> ?? Enumerable.Empty<Cinema>();
+}
+
+<div class="container py-5">
+    <h4 class="mb-1">Wyniki wyszukiwania</h4>
+    @if (!string.IsNullOrWhiteSpace(q))
+    {
+        <p class="mb-4">Fraza: <strong>@q</strong></p>
+    }
+
+    @if (string.IsNullOrWhiteSpace(q))
+    {
+        <p>Wpisz frazę w wyszukiwarkę.</p>
+    }
+    else if (!movies.Any() && !cinemas.Any())
+    {
+        <p>Brak wyników dla „@q".</p>
+    }
+    else
+    {
+        @if (movies.Any())
+        {
+            <h5 class="mb-3 mt-4">Filmy (@movies.Count())</h5>
+            <div class="list-group mb-4">
+                @foreach (var m in movies)
+                {
+                    <a asp-controller="Movies" asp-action="Details" asp-route-id="@m.MovieId"
+                       class="list-group-item list-group-item-action">
+                        <strong>@m.Title</strong>
+                        <span class="ms-2 text-muted small">@m.Director?.FirstName @m.Director?.LastName &middot; @m.Genre &middot; @m.Duration min</span>
+                    </a>
+                }
+            </div>
+        }
+
+        @if (cinemas.Any())
+        {
+            <h5 class="mb-3 mt-4">Kina (@cinemas.Count())</h5>
+            <div class="list-group">
+                @foreach (var c in cinemas)
+                {
+                    <a asp-controller="Cinemas" asp-action="Details" asp-route-id="@c.CinemaId"
+                       class="list-group-item list-group-item-action">
+                        <strong>@c.Name</strong>
+                        <span class="ms-2 text-muted small">@c.City &middot; @c.Address</span>
+                    </a>
+                }
+            </div>
+        }
+    }
+</div>

@@ -1,0 +1,59 @@
+@model Cinema
+@{
+    ViewData["Title"] = Model.Name;
+    var screenings = ViewBag.UpcomingScreenings as IEnumerable<Screening> ?? Enumerable.Empty<Screening>();
+}
+<section class="hero" style="padding:4rem 0;">
+    <div class="container">
+        <span class="city-badge mb-2"><i class="bi bi-geo-alt"></i> @Model.City</span>
+        <h1 class="display-3 mt-2 mb-2">@Model.Name</h1>
+        <p class="text-muted mb-0"><i class="bi bi-pin-map"></i> @Model.Address &bull; <i class="bi bi-telephone"></i> @Model.Phone &bull; <i class="bi bi-envelope"></i> @Model.Email</p>
+    </div>
+</section>
+<div class="container py-4">
+    @if (!string.IsNullOrWhiteSpace(Model.Description))
+    {
+        <p class="lead">@Model.Description</p>
+    }
+
+    <h2 class="mt-4 mb-3">Halls</h2>
+    <div class="row g-3">
+        @foreach (var h in Model.Halls ?? new List<Hall>())
+        {
+            <div class="col-md-6 col-lg-3">
+                <div class="card p-3 text-center">
+                    <div class="mb-2"><span class="badge-hall @h.Type.ToString().ToLower()">@(h.Type switch { CinePlex.Models.HallType.FourD => "4DX", CinePlex.Models.HallType.ThreeD => "3D", CinePlex.Models.HallType.IMAX => "IMAX", _ => "2D" })</span></div>
+                    <h5 class="mb-1">Hall #@h.Number</h5>
+                    <small class="text-muted"><i class="bi bi-people"></i> Capacity: @h.Capacity</small>
+                </div>
+            </div>
+        }
+    </div>
+
+    <h2 class="mt-5 mb-3">Upcoming Screenings</h2>
+    @if (!screenings.Any())
+    {
+        <p class="text-muted">No upcoming screenings.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-dark-cinema align-middle">
+                <thead><tr><th>Date</th><th>Movie</th><th>Hall</th><th>Audio</th><th>Price</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var s in screenings)
+                    {
+                        <tr>
+                            <td>@s.StartTime.ToString("MMM d, HH:mm")</td>
+                            <td><a asp-controller="Movies" asp-action="Details" asp-route-id="@s.Movie.MovieId">@s.Movie.Title</a></td>
+                            <td><span class="badge-hall @s.Hall.Type.ToString().ToLower()">@(s.Hall.Type switch { CinePlex.Models.HallType.FourD => "4DX", CinePlex.Models.HallType.ThreeD => "3D", CinePlex.Models.HallType.IMAX => "IMAX", _ => "2D" })</span> #@s.Hall.Number</td>
+                            <td><span class="badge-audio">@s.AudioVersion</span></td>
+                            <td>@s.TicketPrice.ToString("0.00") z&#322;</td>
+                            <td><a asp-controller="Screenings" asp-action="Details" asp-route-id="@s.ScreeningId" class="btn btn-sm btn-red">Book</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

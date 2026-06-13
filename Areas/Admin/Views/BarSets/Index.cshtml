@@ -1,0 +1,102 @@
+﻿@model IEnumerable<CinePlex.Models.BarSet>
+@{
+    ViewData["Title"] = "Bar - zestawy";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .drag-handle { cursor: grab; padding: 0 .4rem; user-select: none; }
+    .drag-handle:active { cursor: grabbing; }
+    .set-thumb { width: 52px; height: 52px; object-fit: cover; }
+    .set-thumb-placeholder { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; }
+    .reorder-toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; padding: .6rem 1.1rem; display: none; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0">Zestawy (@Model.Count())</h5>
+    <a asp-action="Create" class="btn btn-red btn-sm"><i class="bi bi-plus-lg me-1"></i> Dodaj zestaw</a>
+</div>
+
+<div class="reorder-toast" id="reorderToast"><i class="bi bi-check-circle me-1"></i> Kolejność zapisana</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">
+        Brak zestawów. <a asp-action="Create">Dodaj pierwszy.</a>
+    </div>
+}
+else
+{
+    <div class="card">
+        <table class="table table-dark-cinema mb-0">
+            <thead>
+                <tr>
+                    <th style="width:36px;"></th>
+                    <th style="width:68px;"></th>
+                    <th>Nazwa</th>
+                    <th>Zawartość</th>
+                    <th>Cena</th>
+                    <th>Dostępny</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="sortableSets" data-reorder-url="@Url.Action("Reorder", "BarSets", new { area = "Admin" })">
+                @foreach (var set in Model)
+                {
+                    <tr data-id="@set.BarSetId">
+                        <td><span class="drag-handle bi bi-grip-vertical"></span></td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(set.ImageUrl))
+                            {
+                                <img src="@set.ImageUrl" alt="@set.Name" class="set-thumb" />
+                            }
+                            else
+                            {
+                                <div class="set-thumb-placeholder"></div>
+                            }
+                        </td>
+                        <td>
+                            <div class="fw-600">@set.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(set.Description))
+                            {
+                                <div class="text-muted small">@set.Description</div>
+                            }
+                        </td>
+                        <td>
+                            @foreach (var si in set.Items)
+                            {
+                                <span class="badge bg-secondary me-1 mb-1">
+                                    @si.BarItem?.Name@(si.Quantity > 1 ? $" ×{si.Quantity}" : "")
+                                </span>
+                            }
+                        </td>
+                        <td class="fw-600" style="color:var(--red);">@set.Price.ToString("0.00") zł</td>
+                        <td>
+                            @if (set.IsAvailable)
+                            {
+                                <span class="badge bg-success">Tak</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Nie</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@set.BarSetId" class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@set.BarSetId" method="post" class="d-inline"
+                                  onsubmit="return confirm('Usunąć zestaw „@set.Name"?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+

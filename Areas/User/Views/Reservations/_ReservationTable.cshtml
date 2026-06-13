@@ -1,0 +1,77 @@
+@model IEnumerable<CinePlex.ViewModels.BookingHistoryItem>
+@using CinePlex.ViewModels
+@using CinePlex.Models
+<div class="table-responsive">
+    <table class="table table-dark-cinema align-middle">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Kod</th>
+                <th>Tytuł / Wydarzenie</th>
+                <th>Data</th>
+                <th>Kino</th>
+                <th>Miejsce</th>
+                <th>Status</th>
+                <th>Cena</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>
+                        @if (item.Kind == BookingHistoryItem.BookingKind.Marathon)
+                        {
+                            <i class="bi bi-collection-play text-muted" title="Maraton"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-ticket-perforated text-muted" title="Seans"></i>
+                        }
+                    </td>
+                    <td><span class="reservation-code" style="font-size:.9rem;letter-spacing:.15rem;">@item.ReservationCode</span></td>
+                    <td>
+                        @if (item.Kind == BookingHistoryItem.BookingKind.Screening && item.Reservation?.Screening?.Movie != null)
+                        {
+                            <a asp-controller="Movies" asp-action="Details" asp-route-id="@item.Reservation.Screening.Movie.MovieId">@item.Reservation.Screening.Movie.Title</a>
+                        }
+                        else
+                        {
+                            <span>@item.Reservation?.Marathon?.Name</span>
+                        }
+                    </td>
+                    <td>@item.EventDate.ToString("dd.MM.yyyy · HH:mm")</td>
+                    <td>
+                        @if (item.Kind == BookingHistoryItem.BookingKind.Screening)
+                        {
+                            <span>@item.Reservation?.Screening?.Hall?.Cinema?.Name</span>
+                        }
+                        else
+                        {
+                            <span>@item.Reservation?.Marathon?.Hall?.Cinema?.Name</span>
+                        }
+                    </td>
+                    <td>
+                        @if (item.Kind == BookingHistoryItem.BookingKind.Screening)
+                        {
+                            <strong>@item.Reservation?.SeatNumber</strong>
+                        }
+                        else
+                        {
+                            <strong>@(item.Reservation?.SeatRow)@(item.Reservation?.SeatNumber)</strong>
+                        }
+                    </td>
+                    <td><span class="badge-status @item.Status.ToString().ToLower()">@item.Status</span></td>
+                    <td class="text-muted small">@item.PricePaid.ToString("C", new System.Globalization.CultureInfo("pl-PL"))</td>
+                    <td>
+                        @if (item.Kind == BookingHistoryItem.BookingKind.Screening && item.Reservation != null)
+                        {
+                            <a asp-controller="Reservations" asp-action="Details" asp-route-id="@item.Reservation.ReservationId" class="btn btn-sm btn-outline-light"><i class="bi bi-eye"></i></a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

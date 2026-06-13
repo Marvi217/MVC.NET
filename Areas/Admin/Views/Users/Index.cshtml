@@ -1,0 +1,35 @@
+@model IEnumerable<AppUser>
+@{
+    ViewData["Title"] = "Users";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <form method="get" class="d-flex gap-2" style="max-width:400px;">
+        <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Search name or email..." />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+    </form>
+</div>
+<div class="table-responsive">
+    <table class="table table-dark-cinema align-middle">
+        <thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Reservations</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td><strong>@u.FullName</strong></td>
+                    <td>@u.Email</td>
+                    <td>@u.RegisteredAt.ToString("yyyy-MM-dd")</td>
+                    <td>@(u.Reservations?.Count ?? 0)</td>
+                    <td>@if(u.IsBlocked){
+                    <span class="badge-status cancelled">Blocked</span>
+                }else
+                {
+
+                    <span class="badge-status confirmed">Active</span>
+                }
+</td>
+                <td class="text-end"><a asp-action="Details" asp-route-id="@u.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+                        }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,12 @@
+@model Hall
+@{
+    ViewData["Title"] = "Delete Hall";
+}
+<div class="card p-4">
+    <h3 class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Confirm Delete</h3>
+    <p>Delete Hall #@Model.Number at <strong>@Model.Cinema?.Name</strong>?</p>
+    <form asp-action="Delete" asp-route-id="@Model.HallId" method="post" data-confirm-delete>
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Yes, Delete</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

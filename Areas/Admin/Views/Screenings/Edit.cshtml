@@ -1,0 +1,246 @@
+﻿@model Screening
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Edytuj seans";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    var minDate      = DateTime.Today.ToString("yyyy-MM-dd");
+    var existingDate = Model.StartTime.ToString("yyyy-MM-dd");
+    var existingTime = Model.StartTime.ToString("HH:mm");
+}
+
+<div class="card p-4" style="max-width:760px;">
+    <h5 class="mb-4">Edytuj seans</h5>
+    <form asp-action="Edit" method="post" id="editForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="ScreeningId" />
+        <input type="hidden" asp-for="StartTime" id="StartTimeHidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-12">
+                <label class="form-label">Film</label>
+                <select asp-for="MovieId" asp-items="ViewBag.Movies" class="form-select" id="movieSelect"></select>
+                <span asp-validation-for="MovieId" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-2">
+            <div class="col-md-6">
+                <label class="form-label">Kino</label>
+                <select id="cinemaSelect" class="form-select">
+                    <option value="">- wybierz kino -</option>
+                    @foreach (var c in (IEnumerable<SelectListItem>)ViewBag.Cinemas)
+                    {
+                        <option value="@c.Value">@c.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Sala</label>
+                <select asp-for="HallId" id="hallSelect" class="form-select">
+                    <option value="">- wybierz salę -</option>
+                </select>
+                <span asp-validation-for="HallId" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-2">
+            <div class="col-md-6">
+                <label class="form-label">Data</label>
+                <input type="text" id="startDate" class="form-control" readonly
+                       placeholder="Wybierz datę…" value="@existingDate" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Godzina</label>
+                <select id="startHour" class="form-select" disabled>
+                    <option value="">Ładowanie…</option>
+                </select>
+                <span asp-validation-for="StartTime" class="text-danger small"></span>
+            </div>
+        </div>
+
+        
+        <div id="hallSchedulePanel" class="mb-3" style="display:none;">
+            <div class="p-3 rounded" style="background:rgba(255,255,255,.04);border:1px solid var(--border);">
+                <div class="mb-2" style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">
+                    Harmonogram sali - <span id="scheduleRangeLabel"></span>
+                </div>
+                <div id="hallScheduleBody"></div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label asp-for="AudioVersion" class="form-label">Wersja audio</label>
+                <select asp-for="AudioVersion" asp-items="Html.GetEnumSelectList<AudioVersion>()" class="form-select"></select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" asp-for="IsPublished" class="form-check-input" id="isPublished" />
+                    <label class="form-check-label" for="isPublished">
+                        <i class="bi bi-eye me-1"></i> Widoczny dla użytkowników od razu
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">Opublikuj w dniu (opcjonalnie)</label>
+                <input asp-for="PublishDate" type="date" class="form-control form-control-sm"
+                       title="Seans stanie się widoczny automatycznie w tym dniu" />
+                <div class="text-muted" style="font-size:.72rem;margin-top:.25rem;">Pozostaw puste jeśli używasz opcji powyżej.</div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-red"><i class="bi bi-check-circle me-1"></i> Zapisz</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Anuluj</a>
+        </div>
+    </form>
+</div>
+
+@section Styles {
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+}
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+<script>
+(function () {
+    var allHalls     = @Html.Raw(ViewBag.HallsJson);
+    var cinemaSelect = document.getElementById('cinemaSelect');
+    var hallSelect   = document.getElementById('hallSelect');
+    var movieSelect  = document.getElementById('movieSelect');
+    var startDate    = document.getElementById('startDate');
+    var startHour    = document.getElementById('startHour');
+    var hiddenStart  = document.getElementById('StartTimeHidden');
+    var panel        = document.getElementById('hallSchedulePanel');
+    var scheduleBody = document.getElementById('hallScheduleBody');
+    var rangeLabel   = document.getElementById('scheduleRangeLabel');
+    var screeningId  = '@Model.ScreeningId';
+    var preselectTime = '@existingTime';
+
+    // --- Flatpickr ---
+    flatpickr(startDate, {
+        locale: 'pl',
+        dateFormat: 'Y-m-d',
+        minDate: '@minDate',
+        defaultDate: '@existingDate',
+        disableMobile: true,
+        onChange: function () {
+            loadSchedule();
+            loadTimes();
+        }
+    });
+
+    // --- Hall filter ---
+    function filterHalls(cinemaId, selectedHallId) {
+        var filtered = allHalls.filter(function (h) { return String(h.cinemaId) === String(cinemaId); });
+        hallSelect.innerHTML = filtered.length
+            ? '<option value="">- wybierz salę -</option>'
+            : '<option value="">Brak sal w tym kinie</option>';
+        filtered.forEach(function (h) {
+            var opt = document.createElement('option');
+            opt.value = h.id; opt.textContent = h.label;
+            if (selectedHallId && String(h.id) === String(selectedHallId)) opt.selected = true;
+            hallSelect.appendChild(opt);
+        });
+        hallSelect.disabled = filtered.length === 0;
+    }
+
+    // --- Available times ---
+    function loadTimes() {
+        var hallId  = hallSelect.value;
+        var date    = startDate.value;
+        var movieId = movieSelect.value;
+        if (!hallId || !date || !movieId) {
+            startHour.innerHTML = '<option value="">- najpierw uzupełnij dane -</option>';
+            startHour.disabled = true;
+            updateHidden();
+            return;
+        }
+        startHour.innerHTML = '<option value="">Ładowanie…</option>';
+        startHour.disabled = true;
+        var url = '/Admin/Screenings/AvailableTimes?hallId=' + hallId + '&date=' + date
+                + '&movieId=' + movieId + '&excludeId=' + screeningId;
+        fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (times) {
+                startHour.innerHTML = times.length
+                    ? '<option value="">- wybierz godzinę -</option>'
+                    : '<option value="">Brak wolnych slotów</option>';
+                times.forEach(function (t) {
+                    var opt = document.createElement('option');
+                    opt.value = t; opt.textContent = t;
+                    if (t === preselectTime) opt.selected = true;
+                    startHour.appendChild(opt);
+                });
+                startHour.disabled = times.length === 0;
+                preselectTime = '';
+                updateHidden();
+            })
+            .catch(function () {
+                startHour.innerHTML = '<option value="">Błąd ładowania</option>';
+                startHour.disabled = true;
+                updateHidden();
+            });
+    }
+
+    // --- Schedule panel ---
+    function loadSchedule() {
+        var hallId = hallSelect.value;
+        var date   = startDate.value;
+        if (!hallId || !date) { panel.style.display = 'none'; return; }
+        fetch('/Admin/Screenings/HallSchedule?hallId=' + hallId + '&date=' + date)
+            .then(function (r) { return r.json(); })
+            .then(function (items) {
+                if (!items.length) { panel.style.display = 'none'; return; }
+                rangeLabel.textContent = items[0].date;
+                scheduleBody.innerHTML = items.map(function (s) {
+                    var highlight = String(s.screeningId) === screeningId
+                        ? ' style="font-weight:600;"' : '';
+                    return '<div class="d-flex gap-3 small py-1"' + highlight
+                        + ' style="border-top:1px solid var(--border);">'
+                        + '<span style="min-width:90px;">' + s.start + ' – ' + s.endWithBuffer + '</span>'
+                        + '<span>' + s.movie + ' (' + s.duration + ' min)</span>'
+                        + '</div>';
+                }).join('');
+                panel.style.display = '';
+            })
+            .catch(function () { panel.style.display = 'none'; });
+    }
+
+    function updateHidden() {
+        var date = startDate.value;
+        var time = startHour.value;
+        hiddenStart.value = (date && time) ? date + 'T' + time + ':00' : '';
+    }
+
+    // --- Events ---
+    cinemaSelect.addEventListener('change', function () {
+        filterHalls(this.value, null);
+        panel.style.display = 'none';
+        startHour.innerHTML = '<option value="">- najpierw uzupełnij dane -</option>';
+        startHour.disabled = true;
+        hiddenStart.value = '';
+    });
+
+    hallSelect.addEventListener('change', function () { loadSchedule(); loadTimes(); });
+    movieSelect.addEventListener('change', function () { loadTimes(); });
+    startHour.addEventListener('change', updateHidden);
+
+    // --- Init: pre-select existing cinema/hall and load data ---
+    var currentCinemaId = '@(ViewBag.SelectedCinemaId?.ToString() ?? "")';
+    var currentHallId   = '@(ViewBag.SelectedHallId?.ToString() ?? "")';
+    if (currentCinemaId) {
+        cinemaSelect.value = currentCinemaId;
+        filterHalls(currentCinemaId, currentHallId);
+        loadSchedule();
+        loadTimes();
+    }
+    updateHidden();
+})();
+</script>
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,79 @@
+@model CinePlex.Models.BarItem
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Dodaj produkt";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    var categories = ViewBag.Categories as IEnumerable<BarCategory> ?? Enum.GetValues<BarCategory>();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card p-4">
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Nazwa</label>
+                    <input asp-for="Name" class="form-control" placeholder="np. Popcorn Maślany" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label">Opis <span class="text-muted">(opcjonalny)</span></label>
+                    <input asp-for="Description" class="form-control" placeholder="np. Duży kubek, 500g" />
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label asp-for="Price" class="form-label">Cena (zł)</label>
+                        <input asp-for="Price" type="number" step="0.01" min="0.01" class="form-control" placeholder="0.00" />
+                        <span asp-validation-for="Price" class="text-danger small"></span>
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="Category" class="form-label">Kategoria</label>
+                        <select asp-for="Category" class="form-select">
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@((int)cat)">@cat</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Zdjęcie <span class="text-muted">(opcjonalne)</span></label>
+                    <input type="file" name="image" class="form-control" accept="image/*" id="imgInput" />
+                    <div class="mt-2" id="imgPreviewWrap" style="display:none;">
+                        <img id="imgPreview" src="" alt="" style="max-height:140px;border-radius:8px;border:1px solid var(--border);" />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input asp-for="IsAvailable" class="form-check-input" type="checkbox" checked />
+                        <label asp-for="IsAvailable" class="form-check-label">Dostępny w menu</label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-red"><i class="bi bi-plus-lg me-1"></i> Dodaj</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Anuluj</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.getElementById('imgInput').addEventListener('change', function () {
+    var f = this.files[0];
+    if (!f) return;
+    var wrap = document.getElementById('imgPreviewWrap');
+    var img  = document.getElementById('imgPreview');
+    var reader = new FileReader();
+    reader.onload = function(e) { img.src = e.target.result; wrap.style.display = ''; };
+    reader.readAsDataURL(f);
+});
+</script>
+}

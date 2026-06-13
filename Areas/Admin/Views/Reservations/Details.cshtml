@@ -1,0 +1,31 @@
+@model Reservation
+@{
+    ViewData["Title"] = $"Reservation {Model.ReservationCode}";
+}
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card p-3">
+            <h4>@Model.ReservationCode</h4>
+            <table class="table table-dark-cinema mb-0">
+                <tr><th>User</th><td>@Model.AppUser?.FullName</td></tr>
+                <tr><th>Movie</th><td>@Model.Screening.Movie.Title</td></tr>
+                <tr><th>Cinema</th><td>@Model.Screening.Hall.Cinema.Name</td></tr>
+                <tr><th>Hall</th><td>#@Model.Screening.Hall.Number � <span class="badge-hall @Model.Screening.Hall.Type.ToString().ToLower()">@(Model.Screening.Hall.Type switch { CinePlex.Models.HallType.FourD => "4DX", CinePlex.Models.HallType.ThreeD => "3D", CinePlex.Models.HallType.IMAX => "IMAX", _ => "2D" })</span></td></tr>
+                <tr><th>Start</th><td>@Model.Screening.StartTime.ToString("yyyy-MM-dd HH:mm")</td></tr>
+                <tr><th>Seat</th><td>@Model.SeatNumber</td></tr>
+                <tr><th>Purchased</th><td>@Model.PurchaseDate.ToString("yyyy-MM-dd HH:mm")</td></tr>
+                <tr><th>Status</th><td><span class="badge-status @Model.Status.ToString().ToLower()">@Model.Status</span></td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card p-3">
+            <h5>Change Status</h5>
+            <form asp-action="ChangeStatus" asp-route-id="@Model.ReservationId" method="post" class="d-flex gap-2">
+                <select name="status" asp-items="Html.GetEnumSelectList<ReservationStatus>()" class="form-select"></select>
+                <button type="submit" class="btn btn-red">Update</button>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="mt-3"><a asp-action="Index" class="btn btn-outline-secondary">Back</a></div>

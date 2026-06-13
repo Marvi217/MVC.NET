@@ -1,0 +1,40 @@
+@model Movie
+@{
+    ViewData["Title"] = "Edit Movie";
+}
+<div class="card p-4">
+    <h3 class="mb-4">Edit Movie</h3>
+    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        <input type="hidden" asp-for="MovieId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+        <div class="row g-3">
+            <div class="col-md-8"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control" /><span asp-validation-for="Title" class="text-danger small"></span></div>
+            <div class="col-md-4"><label asp-for="Duration" class="form-label">Duration (min)</label><input asp-for="Duration" type="number" class="form-control" /></div>
+            <div class="col-12"><label asp-for="Description" class="form-label"></label><textarea asp-for="Description" rows="4" class="form-control"></textarea></div>
+            <div class="col-md-4"><label asp-for="Genre" class="form-label"></label><select asp-for="Genre" asp-items="Html.GetEnumSelectList<Genre>()" class="form-select"></select></div>
+            <div class="col-md-4"><label asp-for="AgeRating" class="form-label"></label><select asp-for="AgeRating" asp-items="Html.GetEnumSelectList<AgeRating>()" class="form-select"></select></div>
+            <div class="col-md-4"><label asp-for="ReleaseDate" class="form-label"></label><input asp-for="ReleaseDate" type="date" class="form-control" /></div>
+            <div class="col-md-6">
+                <label asp-for="PosterUrl" class="form-label">Plakat — URL</label>
+                <input asp-for="PosterUrl" class="form-control mb-1" />
+                <label class="form-label small text-muted">lub prześlij z komputera</label>
+                <input type="file" name="posterFile" class="form-control form-control-sm" accept="image/*" />
+            </div>
+            <div class="col-md-6"><label asp-for="TrailerUrl" class="form-label">Trailer URL</label><input asp-for="TrailerUrl" class="form-control" /></div>
+            <div class="col-md-6">
+                <label asp-for="DirectorId" class="form-label">Director</label>
+                <select asp-for="DirectorId" class="form-select">
+                    <option value="">— brak —</option>
+                    @foreach (var d in (IEnumerable<CinePlex.Models.Director>)ViewBag.Directors)
+                    {
+                        <option value="@d.DirectorId">@d.FullName</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="mt-4 d-flex gap-2"><button type="submit" class="btn btn-red"><i class="bi bi-check-circle"></i> Save</button><a asp-action="Index" class="btn btn-outline-secondary">Cancel</a></div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

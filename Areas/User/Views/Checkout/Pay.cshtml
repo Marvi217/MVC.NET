@@ -1,0 +1,147 @@
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Symulacja płatności";
+    var reservations = ViewBag.Reservations as List<Reservation> ?? new();
+    var layout       = ViewBag.Layout as HallLayoutConfig;
+    string pendingIds = ViewBag.PendingIds as string ?? "";
+    int screeningId  = ViewBag.ScreeningId is int sid ? sid : 0;
+    string seats     = ViewBag.Seats as string ?? "";
+    DateTime? expires = ViewBag.ExpiresAt as DateTime?;
+    decimal total    = ViewBag.TotalPrice is decimal t ? t : 0m;
+    var primary      = reservations.FirstOrDefault();
+
+    var successUrl = Url.Action("SimulateSuccess", "Checkout", new { area = "User" })!;
+    var failUrl    = Url.Action("SimulateFail",    "Checkout", new { area = "User" })!;
+}
+
+<style>
+.pay-card { padding:2rem; max-width:580px; margin:0 auto; }
+.sim-title { padding-bottom:.5rem; margin-bottom:1rem; }
+.sim-option { display:flex; align-items:center; gap:.75rem; padding:.65rem .9rem; cursor:pointer; margin-bottom:.6rem; }
+.sim-option input { width:17px; height:17px; flex-shrink:0; }
+.seat-chip { padding:.1rem .5rem; margin:.1rem; display:inline-block; }
+.countdown-wrap { display:flex; align-items:center; gap:.6rem; padding:.5rem .85rem; }
+</style>
+
+<div class="container py-4">
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:2px;text-align:center;margin-bottom:1.5rem;">
+        SYMULACJA PŁATNOŚCI
+    </h1>
+
+    <div class="pay-card">
+        @if (primary != null)
+        {
+            <div class="d-flex gap-3 align-items-center mb-4" style="border-bottom:1px solid var(--border);padding-bottom:1rem;">
+                @if (!string.IsNullOrEmpty(primary.Screening.Movie?.PosterUrl))
+                {
+                    <img src="@primary.Screening.Movie.PosterUrl" style="height:60px;border-radius:6px;flex-shrink:0;" />
+                }
+                <div>
+                    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;">@primary.Screening.Movie?.Title?.ToUpper()</div>
+                    <div class="text-muted small">
+                        <i class="bi bi-building"></i> @primary.Screening.Hall?.Cinema?.Name
+                        &nbsp;|&nbsp; <i class="bi bi-clock"></i> @primary.Screening.StartTime.ToString("dd.MM.yyyy HH:mm")
+                    </div>
+                    <div class="mt-1">
+                        @foreach (var r in reservations)
+                        {
+                            <span class="seat-chip">@(layout?.GetSeatLabel(r.SeatNumber) ?? r.SeatNumber.ToString())</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted">Łącznie do zapłaty:</span>
+            <span style="font-size:1.5rem;font-weight:800;color:#ffa500;">@total.ToString("0.00") zł</span>
+        </div>
+
+        @if (expires.HasValue)
+        {
+            <div class="countdown-wrap mb-4">
+                <i class="bi bi-hourglass-split" style="color:#ffa500;"></i>
+                <span>Miejsca zarezerwowane przez:</span>
+                <span class="countdown-timer" id="timer"
+                      data-expires="@expires.Value.ToString("o")">15:00</span>
+                <span class="text-muted small">(po upływie zwolnienie)</span>
+            </div>
+        }
+
+        <form id="payForm" method="post" action="@successUrl">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="pendingIds"  value="@pendingIds" />
+            <input type="hidden" name="screeningId" value="@screeningId" />
+            <input type="hidden" name="seats"       value="@seats" />
+
+            <div class="sim-title"><i class="bi bi-cpu me-2"></i>WYBIERZ WYNIK TRANSAKCJI (DEMO)</div>
+
+            <label class="sim-option">
+                <input type="radio" name="payOutcome" value="success" data-action="@successUrl" checked class="pay-outcome-radio" />
+                <div>
+                    <div style="display:flex;align-items:center;gap:.5rem;">
+                        <i class="bi bi-check-circle-fill" style="color:#4ade80;font-size:1.1rem;"></i>
+                        <strong>Płatność udana</strong>
+                    </div>
+                    <div class="text-muted small mt-1">Transakcja zakończona sukcesem - bilety potwierdzone.</div>
+                </div>
+            </label>
+
+            <label class="sim-option fail">
+                <input type="radio" name="payOutcome" value="fail" data-action="@failUrl" class="pay-outcome-radio" />
+                <div>
+                    <div style="display:flex;align-items:center;gap:.5rem;">
+                        <i class="bi bi-x-circle-fill" style="color:#f87171;font-size:1.1rem;"></i>
+                        <strong>Płatność nieudana</strong>
+                    </div>
+                    <div class="text-muted small mt-1">Bank odrzucił transakcję - wróć do checkout, aby ponowić lub zmienić metodę.</div>
+                </div>
+            </label>
+
+            <div class="d-flex gap-3 mt-4">
+                <a asp-controller="Checkout" asp-action="Index"
+                   asp-route-screeningId="@screeningId"
+                   asp-route-seats="@seats"
+                   asp-route-cancelPendingIds="@pendingIds"
+                   class="btn btn-outline-light flex-grow-1">
+                    <i class="bi bi-arrow-left"></i> Wróć
+                </a>
+                <button type="submit" id="submitBtn" class="btn btn-orange flex-grow-1 btn-lg">
+                    <i class="bi bi-send-fill me-1"></i> Zatwierdź
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var form = document.getElementById('payForm');
+    document.querySelectorAll('.pay-outcome-radio').forEach(function (r) {
+        r.addEventListener('change', function () {
+            form.action = this.dataset.action;
+        });
+    });
+
+    var timerEl = document.getElementById('timer');
+    if (timerEl && timerEl.dataset.expires) {
+        var deadlineMs = new Date(timerEl.dataset.expires).getTime();
+        function tick() {
+            var left = deadlineMs - Date.now();
+            if (left <= 0) {
+                timerEl.textContent = '0:00';
+                timerEl.style.color = '#f87171';
+                return;
+            }
+            var m = Math.floor(left / 60000);
+            var s = Math.floor((left % 60000) / 1000);
+            timerEl.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+            if (left < 60000) timerEl.style.color = '#f87171';
+            setTimeout(tick, 500);
+        }
+        tick();
+    }
+})();
+</script>
+}

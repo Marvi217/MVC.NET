@@ -1,0 +1,119 @@
+@model IEnumerable<Movie>
+@{
+    ViewData["Title"] = "Movies";
+    var genres = ViewBag.Genres as Array;
+    var page = (int)(ViewBag.Page ?? 1);
+    var totalPages = (int)(ViewBag.TotalPages ?? 1);
+}
+
+<style>
+    .movies-grid {
+        columns: 3 260px;
+        column-gap: 1.5rem;
+    }
+    .movies-grid .movie-wrap {
+        break-inside: avoid;
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="container py-4">
+    <h1 class="page-title mb-4">All Movies</h1>
+
+    <form method="get" class="filter-glass p-3 mb-5">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Movie title..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Genre</label>
+                <select name="genre" class="form-select">
+                    <option value="">All genres</option>
+                    @if (genres != null)
+                    {
+                        foreach (var g in genres)
+                        {
+                            var sel = (ViewBag.Genre?.ToString() == g.ToString()) ? "selected" : "";
+                            @Html.Raw($"<option value=\"{g}\" {sel}>{g}</option>")
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sort</label>
+                <select name="sort" class="form-select">
+                    <option value="title" selected="@(ViewBag.Sort?.ToString() == "title")">Title</option>
+                    <option value="newest" selected="@(ViewBag.Sort?.ToString() == "newest")">Newest</option>
+                    <option value="oldest" selected="@(ViewBag.Sort?.ToString() == "oldest")">Oldest</option>
+                    <option value="duration" selected="@(ViewBag.Sort?.ToString() == "duration")">Duration</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-red btn-shimmer"><i class="bi bi-funnel"></i> Filter</button>
+            </div>
+        </div>
+    </form>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-film" style="font-size:3rem;"></i>
+            <p class="mt-3">No movies found.</p>
+        </div>
+    }
+    else
+    {
+        <div class="movies-grid">
+            @foreach (var m in Model)
+            {
+                <div class="movie-wrap">
+                    <div class="movie-card">
+                        <div class="poster">
+                            @if (!string.IsNullOrWhiteSpace(m.PosterUrl))
+                            {
+                                <img src="@m.PosterUrl" alt="@m.Title" />
+                            }
+                            else
+                            {
+                                <i class="bi bi-film placeholder"></i>
+                            }
+                            <div class="hover-overlay">
+                                <a asp-action="Details" asp-route-id="@m.MovieId" class="btn btn-red btn-shimmer"><i class="bi bi-eye"></i> View Details</a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge-genre">@m.Genre</span>
+                                <span class="duration-pill"><i class="bi bi-clock"></i> @m.Duration min</span>
+                            </div>
+                            <h5 class="card-title">@m.Title</h5>
+                            @if (m.Director != null)
+                            {
+                                <p class="small mb-0" style="color:#888;">Directed by @m.Director.FullName</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (totalPages > 1)
+        {
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    @for (int p = 1; p <= totalPages; p++)
+                    {
+                        <li class="page-item @(p == page ? "active" : "")">
+                            <a class="page-link" href="?page=@p&search=@ViewBag.Search&genre=@ViewBag.Genre&sort=@ViewBag.Sort">@p</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    }
+</div>
+

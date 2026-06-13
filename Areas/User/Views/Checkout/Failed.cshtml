@@ -1,0 +1,75 @@
+﻿@{
+    ViewData["Title"] = "Płatność nieudana";
+    int screeningId = ViewBag.ScreeningId is int sid ? sid : 0;
+    string seats = ViewBag.Seats as string ?? "";
+    string pendingIds = ViewBag.PendingIds as string ?? "";
+    DateTime? expiresAt = ViewBag.ExpiresAt as DateTime?;
+}
+
+<style>
+.failed-card {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 2.5rem;
+    text-align: center;
+}
+.countdown-ring {
+    width: 96px; height: 96px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    position: relative;
+}
+.progress-ring {
+    position: absolute; top: -4px; left: -4px;
+    width: 104px; height: 104px;
+    transform: rotate(-90deg);
+}
+.progress-ring circle {
+    fill: none;
+    stroke-width: 4;
+    stroke-dasharray: 314;
+    stroke-linecap: round;
+}
+</style>
+
+<div class="container py-5">
+    <div class="failed-card">
+        <div class="countdown-ring" id="countdownRing">
+            <svg class="progress-ring" viewBox="0 0 104 104">
+                <circle id="progressCircle" cx="52" cy="52" r="50" stroke-dashoffset="0"></circle>
+            </svg>
+            <span id="countdownText">5:00</span>
+        </div>
+
+        <i class="bi bi-x-circle-fill" style="font-size:3rem;color:#f87171;display:block;margin-bottom:.75rem;"></i>
+        <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:2px;color:#f87171;">PŁATNOŚĆ NIEUDANA</h2>
+        <p class="text-muted mt-2 mb-4">
+            Twoje miejsca są zarezerwowane przez <strong style="color:#ffa500;">5 minut</strong>.<br>
+            Możesz ponowić zakup w tym czasie - po upływie czasu miejsca zostaną zwolnione.
+        </p>
+
+        <div id="retrySection">
+            <a id="retryBtn"
+               href="/Checkout?screeningId=@screeningId&seats=@seats&cancelPendingIds=@pendingIds"
+               class="btn btn-orange btn-lg w-100 mb-3">
+                <i class="bi bi-arrow-counterclockwise"></i> Spróbuj ponownie
+            </a>
+            <a asp-controller="Screenings" asp-action="Details" asp-route-id="@screeningId"
+               class="btn btn-outline-light w-100">
+                <i class="bi bi-grid-3x3"></i> Wybierz inne miejsca
+            </a>
+        </div>
+
+        <div id="expiredSection" style="display:none;">
+            <div class="alert mb-3" style="background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);color:#f87171;">
+                <i class="bi bi-hourglass-bottom me-2"></i>
+                Czas minął. Miejsca zostały zwolnione.
+            </div>
+            <a asp-controller="Screenings" asp-action="Details" asp-route-id="@screeningId"
+               class="btn btn-orange btn-lg w-100">
+                <i class="bi bi-grid-3x3"></i> Wybierz miejsca ponownie
+            </a>
+        </div>
+    </div>
+</div>
+

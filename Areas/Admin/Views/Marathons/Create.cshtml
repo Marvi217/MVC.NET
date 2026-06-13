@@ -1,0 +1,287 @@
+@using CinePlex.Models
+@model Marathon
+@{
+    ViewData["Title"] = "Nowy maraton";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+    var allMovies = ViewBag.Movies as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var minDate = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
+    var selectedMovieIds = ViewBag.SelectedMovieIds as List<int> ?? new List<int>();
+    var preDate = Model?.StartTime.Year > 1 ? Model.StartTime.ToString("yyyy-MM-dd") : "";
+    var preTime = Model?.StartTime.Year > 1 ? Model.StartTime.ToString("HH:mm") : "";
+}
+
+<div class="card p-4" style="max-width:900px;">
+    <h5 class="mb-4">Nowy maraton</h5>
+    <form method="post" asp-action="Create" id="marathonForm" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-8">
+                <label class="form-label">Nazwa *</label>
+                <input name="Name" value="@Model?.Name" class="form-control" required maxlength="200" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Cena biletu (zł) *</label>
+                <input name="Price" type="number" step="0.01" min="0" value="@Model?.Price" class="form-control" required />
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Opis</label>
+            <textarea name="Description" class="form-control" rows="3" maxlength="2000">@Model?.Description</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Plakat — URL</label>
+            <input name="PosterUrl" value="@Model?.PosterUrl" class="form-control mb-1" maxlength="500" />
+            <label class="form-label small text-muted">lub prześlij z komputera</label>
+            <input type="file" name="posterFile" class="form-control form-control-sm" accept="image/*" />
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Kino</label>
+                <select id="cinemaSelect" class="form-select">
+                    <option value="">- wybierz kino -</option>
+                    @foreach (var c in (IEnumerable<CinePlex.Models.Cinema>)ViewBag.Cinemas)
+                    {
+                        <option value="@c.CinemaId">@c.Name (@c.City)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Sala</label>
+                <select id="hallSelect" name="HallId" class="form-select" disabled>
+                    <option value="">- najpierw wybierz kino -</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Data startu *</label>
+                <input type="date" id="startDate" name="" class="form-control" min="@minDate" value="@preDate" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Godzina startu *</label>
+                <input type="time" id="startTime" name="" class="form-control" value="@preTime" />
+            </div>
+        </div>
+        <input type="hidden" id="StartTimeHidden" name="StartTime" value="@(Model?.StartTime.Year > 1 ? Model.StartTime.ToString("yyyy-MM-ddTHH:mm:ss") : "")" />
+
+        <div class="mb-4">
+            <label class="form-label">Filmy (min. 2, w kolejności wyświetlania)</label>
+            <div class="d-flex gap-2 mb-2">
+                <select id="moviePicker" class="form-select" style="max-width:400px;">
+                    <option value="">- wybierz film -</option>
+                    @foreach (var m in allMovies)
+                    {
+                        <option value="@m.MovieId" data-duration="@m.Duration">@m.Title (@m.Duration min)</option>
+                    }
+                </select>
+                <button type="button" id="addMovieBtn" class="btn btn-outline-secondary">
+                    <i class="bi bi-plus"></i> Dodaj
+                </button>
+            </div>
+            <div id="movieList" class="list-group mb-3"></div>
+            <div id="schedulePreview" style="display:none;background:rgba(255,255,255,.04);border:1px solid var(--border);" class="p-3 rounded">
+                <div class="mb-2" style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Podgląd harmonogramu</div>
+                <div id="scheduleBody"></div>
+            </div>
+        </div>
+
+        <div id="planDnia" class="mb-4" style="display:none;">
+            <div class="mb-2" style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Plan dnia w tej sali</div>
+            <div id="planDniaBody" class="p-3 rounded" style="background:rgba(255,255,255,.04);border:1px solid var(--border);min-height:2.5rem;"></div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" name="IsActive" id="isActive" class="form-check-input" value="true" @(Model?.IsActive == true ? "checked" : "") />
+                    <label for="isActive" class="form-check-label">Widoczny publicznie</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">Opublikuj w dniu (opcjonalnie)</label>
+                <input type="date" name="PublishDate" class="form-control form-control-sm"
+                       title="Maraton stanie się widoczny automatycznie w tym dniu" />
+                <div class="text-muted" style="font-size:.72rem;margin-top:.25rem;">Pozostaw puste jeśli używasz opcji powyżej.</div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-red"><i class="bi bi-check-circle me-1"></i> Utwórz maraton</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Anuluj</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var allHalls = @Html.Raw(ViewBag.HallsJson);
+    var cinemaSelect = document.getElementById('cinemaSelect');
+    var hallSelect   = document.getElementById('hallSelect');
+    var startDate    = document.getElementById('startDate');
+    var startTime    = document.getElementById('startTime');
+    var hiddenStart  = document.getElementById('StartTimeHidden');
+    var moviePicker  = document.getElementById('moviePicker');
+    var addBtn       = document.getElementById('addMovieBtn');
+    var movieList    = document.getElementById('movieList');
+    var preview      = document.getElementById('schedulePreview');
+    var scheduleBody = document.getElementById('scheduleBody');
+    var planDnia     = document.getElementById('planDnia');
+    var planDniaBody = document.getElementById('planDniaBody');
+
+    var selectedMovies = [];
+
+    // restore after validation failure
+    var preHallId = '@(Model?.HallId > 0 ? Model.HallId.ToString() : "")';
+    var preMovieIds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(selectedMovieIds));
+
+    function loadPlanDnia() {
+        var hid = hallSelect.value;
+        var dt  = startDate.value;
+        if (!hid || !dt) { planDnia.style.display = 'none'; return; }
+        planDnia.style.display = '';
+        planDniaBody.innerHTML = '<span class="text-muted small">Ładowanie…</span>';
+        fetch('/Admin/Marathons/GetHallSchedule?hallId=' + hid + '&date=' + dt)
+            .then(r => r.json())
+            .then(function(items) {
+                if (!items.length) {
+                    planDniaBody.innerHTML = '<span class="text-muted small">Brak seansów w tym dniu.</span>';
+                    return;
+                }
+                planDniaBody.innerHTML = items.map(function(s) {
+                    var badge = s.marathonName
+                        ? '<span class="badge ms-2" style="background:var(--accent-red);font-size:.65rem;">MARATON: ' + s.marathonName + '</span>'
+                        : '';
+                    return '<div class="d-flex align-items-center gap-2 small py-1" style="border-top:1px solid var(--border);">'
+                        + '<span style="min-width:110px;font-variant-numeric:tabular-nums;">' + s.start + ' – ' + s.end + '</span>'
+                        + '<span>' + s.title + badge + '</span></div>';
+                }).join('');
+            })
+            .catch(function() { planDniaBody.innerHTML = '<span class="text-danger small">Błąd ładowania.</span>'; });
+    }
+
+    function filterHalls(cinemaId) {
+        var filtered = allHalls.filter(h => String(h.cinemaId) === String(cinemaId));
+        hallSelect.innerHTML = filtered.length
+            ? '<option value="">- wybierz salę -</option>'
+            : '<option value="">Brak sal</option>';
+        filtered.forEach(h => {
+            var o = document.createElement('option');
+            o.value = h.id; o.textContent = h.label;
+            hallSelect.appendChild(o);
+        });
+        hallSelect.disabled = !filtered.length;
+    }
+
+    cinemaSelect.addEventListener('change', () => filterHalls(cinemaSelect.value));
+    hallSelect.addEventListener('change', loadPlanDnia);
+
+    function updateHidden() {
+        hiddenStart.value = (startDate.value && startTime.value)
+            ? startDate.value + 'T' + startTime.value + ':00' : '';
+        updatePreview();
+    }
+    startDate.addEventListener('change', function() { updateHidden(); loadPlanDnia(); });
+    startTime.addEventListener('change', updateHidden);
+
+    function renderMovieList() {
+        movieList.innerHTML = '';
+        selectedMovies.forEach((m, i) => {
+            var div = document.createElement('div');
+            div.className = 'list-group-item d-flex align-items-center gap-2';
+            div.innerHTML = '<span class="text-muted small me-1">' + (i+1) + '.</span>'
+                + '<span class="flex-grow-1">' + m.title + ' <small class="text-muted">(' + m.duration + ' min)</small></span>'
+                + (i > 0 ? '<button type="button" class="btn btn-sm btn-link p-0" data-up="' + i + '">↑</button>' : '')
+                + (i < selectedMovies.length-1 ? '<button type="button" class="btn btn-sm btn-link p-0" data-down="' + i + '">↓</button>' : '')
+                + '<button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" data-remove="' + i + '"><i class="bi bi-x"></i></button>';
+            movieList.appendChild(div);
+            // hidden inputs
+            var inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'movieIds'; inp.value = m.id;
+            div.appendChild(inp);
+        });
+
+        movieList.querySelectorAll('[data-up]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                var i = +btn.dataset.up;
+                [selectedMovies[i-1], selectedMovies[i]] = [selectedMovies[i], selectedMovies[i-1]];
+                renderMovieList(); updatePreview();
+            });
+        });
+        movieList.querySelectorAll('[data-down]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                var i = +btn.dataset.down;
+                [selectedMovies[i], selectedMovies[i+1]] = [selectedMovies[i+1], selectedMovies[i]];
+                renderMovieList(); updatePreview();
+            });
+        });
+        movieList.querySelectorAll('[data-remove]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedMovies.splice(+btn.dataset.remove, 1);
+                renderMovieList(); updatePreview();
+            });
+        });
+    }
+
+    addBtn.addEventListener('click', () => {
+        var opt = moviePicker.options[moviePicker.selectedIndex];
+        if (!opt.value) return;
+        selectedMovies.push({ id: opt.value, title: opt.textContent.split(' (')[0], duration: +opt.dataset.duration });
+        moviePicker.value = '';
+        renderMovieList(); updatePreview();
+    });
+
+    function updatePreview() {
+        if (!hiddenStart.value || selectedMovies.length === 0) { preview.style.display = 'none'; return; }
+        var slot = new Date(hiddenStart.value);
+        var rows = selectedMovies.map((m, i) => {
+            var start = slot.toLocaleTimeString('pl-PL', {hour:'2-digit',minute:'2-digit'});
+            slot = new Date(slot.getTime() + (m.duration + 20) * 60000);
+            var end = new Date(slot.getTime() - 20 * 60000).toLocaleTimeString('pl-PL', {hour:'2-digit',minute:'2-digit'});
+            return '<div class="d-flex gap-3 small py-1" style="border-top:1px solid var(--border);">'
+                + '<span style="min-width:90px;">' + start + ' – ' + end + '</span>'
+                + '<span>' + (i+1) + '. ' + m.title + ' (' + m.duration + ' min)</span></div>';
+        });
+        scheduleBody.innerHTML = rows.join('');
+        preview.style.display = '';
+    }
+
+    // restore cinema/hall
+    if (preHallId) {
+        var hall = allHalls.find(h => String(h.id) === String(preHallId));
+        if (hall) {
+            cinemaSelect.value = String(hall.cinemaId);
+            filterHalls(hall.cinemaId);
+            hallSelect.value = preHallId;
+            loadPlanDnia();
+        }
+    }
+
+    // restore movies
+    if (preMovieIds && preMovieIds.length) {
+        var allMoviesArr = Array.from(moviePicker.options).filter(o => o.value);
+        preMovieIds.forEach(function(id) {
+            var opt = allMoviesArr.find(o => String(o.value) === String(id));
+            if (opt) {
+                selectedMovies.push({ id: String(id), title: opt.textContent.split(' (')[0], duration: +opt.dataset.duration });
+            }
+        });
+        renderMovieList();
+        updatePreview();
+    }
+
+    document.getElementById('marathonForm').addEventListener('submit', function () {
+        if (startDate.value && startTime.value) {
+            hiddenStart.value = startDate.value + 'T' + startTime.value + ':00';
+        }
+    });
+})();
+</script>
+<partial name="_ValidationScriptsPartial" />
+}

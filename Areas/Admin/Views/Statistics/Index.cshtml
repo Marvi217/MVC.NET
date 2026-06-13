@@ -1,0 +1,235 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+    var topMovies = ViewBag.TopMovies as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var perMonth = ViewBag.ReservationsPerMonth as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var revPerCinema = ViewBag.RevenuePerCinema as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+
+    var topMovieLabelsJson = System.Text.Json.JsonSerializer.Serialize(topMovies.Select(x => (string)x.Title).ToList());
+    var topMovieDataJson   = System.Text.Json.JsonSerializer.Serialize(topMovies.Select(x => (int)x.ReservationCount).ToList());
+    var cinemaLabelsJson   = System.Text.Json.JsonSerializer.Serialize(revPerCinema.Select(x => (string)x.Name).ToList());
+    var cinemaDataJson     = System.Text.Json.JsonSerializer.Serialize(revPerCinema.Select(x => (decimal)x.Revenue).ToList());
+    var monthlyLabelsJson  = System.Text.Json.JsonSerializer.Serialize(perMonth.Select(x => (string)x.Month).ToList());
+    var monthlyDataJson    = System.Text.Json.JsonSerializer.Serialize(perMonth.Select(x => (int)x.Count).ToList());
+}
+
+<style>
+    .sg {
+        padding: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .sg .bg-ico {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+    .sg .ico {
+        width: 52px; height: 52px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .sg .val { line-height: 1; }
+    .chart-card {
+        padding: 1.5rem;
+    }
+    .chart-card .ch-title {
+        margin-bottom: 1.25rem;
+    }
+    .qa2 {
+        padding: 1.25rem;
+        text-align: center;
+        display: block;
+        text-decoration: none;
+    }
+    .qa2 i {
+        display: block;
+        margin-bottom: .5rem;
+    }
+    .users-row {
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="sg sg-top-red">
+            <div class="ico"><i class="bi bi-film"></i></div>
+            <div>
+                <div class="val" data-target="@ViewBag.TotalMovies" data-suffix="">@ViewBag.TotalMovies</div>
+                <div class="lbl">Movies</div>
+            </div>
+            <div class="bg-ico"><i class="bi bi-film"></i></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="sg sg-top-blue">
+            <div class="ico"><i class="bi bi-calendar-event"></i></div>
+            <div>
+                <div class="val" data-target="@ViewBag.TotalScreenings" data-suffix="">@ViewBag.TotalScreenings</div>
+                <div class="lbl">Screenings</div>
+            </div>
+            <div class="bg-ico"><i class="bi bi-calendar-event"></i></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="sg sg-top-purple">
+            <div class="ico"><i class="bi bi-ticket-perforated"></i></div>
+            <div>
+                <div class="val" data-target="@ViewBag.TotalReservations" data-suffix="">@ViewBag.TotalReservations</div>
+                <div class="lbl">Reservations</div>
+            </div>
+            <div class="bg-ico"><i class="bi bi-ticket-perforated"></i></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="sg sg-top-gold">
+            <div class="ico"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="val" data-target="@(((decimal)(ViewBag.TotalRevenue ?? 0m)).ToString("0"))" data-suffix=" zł">@(((decimal)(ViewBag.TotalRevenue ?? 0m)).ToString("0")) zł</div>
+                <div class="lbl">Revenue</div>
+            </div>
+            <div class="bg-ico"><i class="bi bi-cash-stack"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><a asp-controller="Movies"    asp-action="Create" class="qa2"><i class="bi bi-plus-circle"></i>Add Movie</a></div>
+    <div class="col-md-4"><a asp-controller="Screenings" asp-action="Create" class="qa2"><i class="bi bi-plus-circle"></i>Add Screening</a></div>
+    <div class="col-md-4"><a asp-controller="Cinemas"   asp-action="Create" class="qa2"><i class="bi bi-plus-circle"></i>Add Cinema</a></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="chart-card">
+            <div class="ch-title">Top Movies by Reservations</div>
+            <canvas id="topMoviesChart" height="220"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="chart-card">
+            <div class="ch-title">Revenue by Cinema</div>
+            <canvas id="cinemaChart" height="220"></canvas>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="chart-card">
+            <div class="ch-title">Reservations per Month</div>
+            <canvas id="monthlyChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="users-row mt-3">
+    <span class="text-muted"><i class="bi bi-people me-1"></i>Total users: <strong class="text-light">@ViewBag.TotalUsers</strong></span>
+    <a asp-controller="Users" asp-action="Index" class="btn btn-sm btn-outline-secondary">Manage users</a>
+</div>
+
+<script type="application/json" id="topMovieLabels">@Html.Raw(topMovieLabelsJson)</script>
+<script type="application/json" id="topMovieData">@Html.Raw(topMovieDataJson)</script>
+<script type="application/json" id="cinemaLabels">@Html.Raw(cinemaLabelsJson)</script>
+<script type="application/json" id="cinemaData">@Html.Raw(cinemaDataJson)</script>
+<script type="application/json" id="monthlyLabels">@Html.Raw(monthlyLabelsJson)</script>
+<script type="application/json" id="monthlyData">@Html.Raw(monthlyDataJson)</script>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    function readJson(id) {
+        var el = document.getElementById(id);
+        if (!el) return [];
+        try { return JSON.parse(el.textContent || '[]'); } catch { return []; }
+    }
+
+    var topMovieLabels = readJson('topMovieLabels');
+    var topMovieData   = readJson('topMovieData');
+    var cinemaLabels   = readJson('cinemaLabels');
+    var cinemaData     = readJson('cinemaData');
+    var monthlyLabels  = readJson('monthlyLabels');
+    var monthlyData    = readJson('monthlyData');
+
+    var gridClr = 'rgba(255,255,255,0.05)';
+    var tickClr = '#6b6560';
+    var red     = '#e50914';
+    var gold    = '#f5c518';
+
+    // Top Movies - bar chart
+    new Chart(document.getElementById('topMoviesChart'), {
+        type: 'bar',
+        data: {
+            labels: topMovieLabels,
+            datasets: [{
+                label: 'Reservations',
+                data: topMovieData,
+                backgroundColor: red,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: tickClr }, grid: { color: gridClr } },
+                y: { ticks: { color: tickClr }, grid: { color: gridClr }, beginAtZero: true }
+            },
+        }
+    });
+
+    // Revenue by Cinema - doughnut
+    new Chart(document.getElementById('cinemaChart'), {
+        type: 'doughnut',
+        data: {
+            labels: cinemaLabels,
+            datasets: [{
+                data: cinemaData,
+                backgroundColor: [red, gold, '#3b82f6', '#8b5cf6', '#28a745'],
+                borderColor: 'rgba(28,25,22,0.8)',
+                borderWidth: 2,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            plugins: { legend: { labels: { color: tickClr, boxWidth: 12, padding: 16 } } },
+        }
+    });
+
+    // Reservations per Month - line with gradient fill
+    var moCtx = document.getElementById('monthlyChart').getContext('2d');
+    var moGrad = moCtx.createLinearGradient(0, 0, 0, 200);
+    moGrad.addColorStop(0, 'rgba(229,9,20,0.35)');
+    moGrad.addColorStop(1, 'rgba(229,9,20,0)');
+    new Chart(moCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Reservations',
+                data: monthlyData,
+                borderColor: red,
+                backgroundColor: moGrad,
+                borderWidth: 2,
+                pointBackgroundColor: red,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.35,
+                fill: true
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: tickClr }, grid: { color: gridClr } },
+                y: { ticks: { color: tickClr }, grid: { color: gridClr }, beginAtZero: true }
+            },
+        }
+    });
+</script>
+}

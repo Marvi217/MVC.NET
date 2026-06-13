@@ -1,0 +1,140 @@
+@model IEnumerable<CinePlex.Models.MovieReview>
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Reviews";
+    var topRated    = ViewBag.TopRatedMovies as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var statuses    = ViewBag.Statuses as IEnumerable<ReviewModerationStatus> ?? Enumerable.Empty<ReviewModerationStatus>();
+    int page        = ViewBag.Page is int p ? p : 1;
+    int totalPages  = ViewBag.TotalPages is int tp ? tp : 1;
+    int pendingCount = ViewBag.PendingCount is int pc ? pc : 0;
+    ReviewModerationStatus? currentStatus = ViewBag.Status as ReviewModerationStatus?;
+
+    string BadgeClass(ReviewModerationStatus s) => s switch {
+        ReviewModerationStatus.Approved => "badge bg-success",
+        ReviewModerationStatus.Hidden   => "badge bg-secondary",
+        _                               => "badge bg-warning text-dark"
+    };
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-4 text-center h-100 d-flex flex-column justify-content-center">
+            <div style="font-size:2.2rem;font-weight:700;color:#fbbf24;">@pendingCount</div>
+            <div class="text-muted small mt-1">Pending moderation</div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card p-3 h-100">
+            <div class="text-muted mb-2" style="text-transform:uppercase;letter-spacing:.07em;font-size:.72rem;">Top reviewed movies</div>
+            @foreach (var m in topRated)
+            {
+                <div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px solid rgba(255,255,255,.06);">
+                    <span style="font-size:.875rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@m.Title</span>
+                    <div class="d-flex gap-3 ms-2 flex-shrink-0">
+                        <span style="color:#fbbf24;font-size:.85rem;">★ @m.Avg.ToString("0.0")</span>
+                        <span class="text-muted small">@m.Count reviews</span>
+                    </div>
+                </div>
+            }
+            @if (!topRated.Any())
+            {
+                <span class="text-muted small">No reviews yet.</span>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+    <form method="get" class="d-flex gap-2 flex-wrap">
+        <select name="status" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            <option value="">All statuses</option>
+            @foreach (var s in statuses)
+            {
+                <option value="@((int)s)" selected="@(currentStatus == s ? "selected" : null)">@s</option>
+            }
+        </select>
+        <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Movie or user…" style="width:220px;" />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+    </form>
+    <span class="text-muted small">@Model.Count() reviews shown</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-dark-cinema align-middle">
+        <thead>
+            <tr>
+                <th>Movie</th>
+                <th>User</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model)
+            {
+                <tr>
+                    <td><strong>@r.Movie?.Title</strong></td>
+                    <td class="text-muted small">@r.AppUser?.Email</td>
+                    <td style="color:#fbbf24;letter-spacing:-.05em;">@(new string('★', r.Rating))@(new string('☆', 5 - r.Rating))</td>
+                    <td class="text-muted small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                        title="@r.Comment">@r.Comment</td>
+                    <td class="text-muted small">@r.CreatedAt.ToString("dd.MM.yyyy")</td>
+                    <td><span class="@BadgeClass(r.ModerationStatus)">@r.ModerationStatus</span></td>
+                    <td class="text-end">
+                        <div class="d-flex gap-1 justify-content-end">
+                            @if (r.ModerationStatus != ReviewModerationStatus.Approved)
+                            {
+                                <form asp-action="Moderate" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.ReviewId" />
+                                    <input type="hidden" name="status" value="@((int)ReviewModerationStatus.Approved)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Approve">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                </form>
+                            }
+                            @if (r.ModerationStatus != ReviewModerationStatus.Hidden)
+                            {
+                                <form asp-action="Moderate" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.ReviewId" />
+                                    <input type="hidden" name="status" value="@((int)ReviewModerationStatus.Hidden)" />
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Hide">
+                                        <i class="bi bi-eye-slash"></i>
+                                    </button>
+                                </form>
+                            }
+                            <form asp-action="Delete" method="post" class="m-0"
+                                  onsubmit="return confirm('Delete this review permanently?')">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@r.ReviewId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (totalPages > 1)
+{
+    <nav>
+        <ul class="pagination pagination-sm justify-content-center mt-3">
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == page ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@i"
+                       asp-route-status="@((int?)currentStatus)"
+                       asp-route-search="@ViewBag.Search">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

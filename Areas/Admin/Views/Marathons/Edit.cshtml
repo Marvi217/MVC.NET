@@ -1,0 +1,56 @@
+@model CinePlex.Models.Marathon
+@{
+    ViewData["Title"] = "Edytuj maraton";
+    Layout = "~/Areas/Admin/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card p-4" style="max-width:640px;">
+    <h5 class="mb-1">Edytuj maraton</h5>
+    <p class="text-muted small mb-4">Sala, data startu i lista filmów są zablokowane po utworzeniu maratonu.</p>
+
+    <form method="post" asp-action="Edit" asp-route-id="@Model.MarathonId" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label class="form-label">Nazwa *</label>
+            <input name="name" value="@Model.Name" class="form-control" required maxlength="200" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis</label>
+            <textarea name="description" class="form-control" rows="3" maxlength="2000">@Model.Description</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Plakat — URL</label>
+            <input name="posterUrl" value="@Model.PosterUrl" class="form-control mb-1" maxlength="500" />
+            <label class="form-label small text-muted">lub prześlij z komputera</label>
+            <input type="file" name="posterFile" class="form-control form-control-sm" accept="image/*" />
+        </div>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input type="checkbox" name="isActive" id="isActive" class="form-check-input" value="true" @(Model.IsActive ? "checked" : "") />
+                    <label for="isActive" class="form-check-label">Widoczny publicznie</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small">Opublikuj w dniu (opcjonalnie)</label>
+                <input type="date" name="publishDate" class="form-control form-control-sm"
+                       value="@(Model.PublishDate.HasValue ? Model.PublishDate.Value.ToString("yyyy-MM-dd") : "")"
+                       title="Maraton stanie się widoczny automatycznie w tym dniu" />
+                <div class="text-muted" style="font-size:.72rem;margin-top:.25rem;">Pozostaw puste jeśli używasz opcji powyżej.</div>
+            </div>
+        </div>
+
+        <div class="p-3 rounded mb-4" style="background:rgba(255,255,255,.04);border:1px solid var(--border);">
+            <div class="small text-muted mb-2">Seanse (tylko do odczytu)</div>
+            @foreach (var (s, i) in Model.Screenings.OrderBy(s => s.StartTime).Select((s, i) => (s, i + 1)))
+            {
+                <div class="small py-1">@i. @s.Movie?.Title — @s.StartTime.ToString("HH:mm")</div>
+            }
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-red"><i class="bi bi-check-circle me-1"></i> Zapisz</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Anuluj</a>
+        </div>
+    </form>
+</div>

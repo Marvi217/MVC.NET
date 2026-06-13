@@ -1,0 +1,33 @@
+@model IEnumerable<Cinema>
+@{
+    ViewData["Title"] = "Cinemas";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <form method="get" class="d-flex gap-2" style="max-width:400px;">
+        <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Search name or city..." />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+    </form>
+    <a asp-action="Create" class="btn btn-red"><i class="bi bi-plus-circle"></i> New Cinema</a>
+</div>
+<div class="table-responsive">
+    <table class="table table-dark-cinema align-middle">
+        <thead><tr><th>Name</th><th>City</th><th>Address</th><th>Phone</th><th>Halls</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+            @foreach (var c in Model)
+            {
+                <tr>
+                    <td><strong>@c.Name</strong></td>
+                    <td><span class="city-badge">@c.City</span></td>
+                    <td>@c.Address</td>
+                    <td>@c.Phone</td>
+                    <td>@(c.Halls?.Count ?? 0)</td>
+                    <td class="text-end">
+                        <a asp-action="Details" asp-route-id="@c.CinemaId" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                        <a asp-action="Edit" asp-route-id="@c.CinemaId" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                        <a asp-action="Delete" asp-route-id="@c.CinemaId" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

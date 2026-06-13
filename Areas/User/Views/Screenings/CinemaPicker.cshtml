@@ -1,0 +1,101 @@
+﻿@model IEnumerable<CinePlex.Models.Cinema>
+@{
+    int? movieId = ViewBag.MovieId as int?;
+    string? movieTitle = ViewBag.MovieTitle as string;
+    string? moviePoster = ViewBag.MoviePoster as string;
+    string? hallType = ViewBag.HallType as string;
+    var pageTitle = movieId.HasValue && !string.IsNullOrEmpty(movieTitle)
+        ? "WYBIERZ KINO DLA: " + movieTitle.ToUpper()
+        : hallType != null ? $"WYBIERZ KINO - {hallType.ToUpper()}"
+        : "WYBIERZ KINO";
+    ViewData["Title"] = "Wybierz kino";
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<style>
+    .cinema-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    .cinema-card {
+        padding: 1.8rem;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        gap: .6rem;
+    }
+    .cinema-halls {
+        margin-top: .4rem;
+        padding-top: .6rem;
+    }
+    .cinema-halls span {
+        display: inline-block;
+        padding: .18rem .55rem;
+        margin: .15rem .1rem;
+    }
+</style>
+
+<div class="container py-4">
+    <h1 class="picker-header">@pageTitle</h1>
+    @if (movieId.HasValue)
+    {
+        <p class="text-muted">Wybierz kino, w którym chcesz zobaczyć ten film</p>
+        @if (!string.IsNullOrEmpty(moviePoster))
+        {
+            <div class="mb-3" style="display:flex;align-items:center;gap:1rem;">
+                <img src="@moviePoster" alt="@movieTitle" style="height:90px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.5);" />
+                <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px;color:#f0f0f0;">@movieTitle</span>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="text-muted">Wybierz placówkę, aby zobaczyć repertuar</p>
+    }
+
+    <div class="cinema-grid">
+        @foreach (var cinema in Model)
+        {
+            var hallTypes = cinema.Halls
+                .GroupBy(h => h.Type)
+                .Select(g => new { Label = g.Key switch {
+                    CinePlex.Models.HallType.IMAX   => "IMAX",
+                    CinePlex.Models.HallType.ThreeD => "3D",
+                    CinePlex.Models.HallType.FourD  => "4DX",
+                    _                               => "2D"
+                }, Count = g.Count() })
+                .OrderBy(x => x.Label)
+                .ToList();
+            var cardHref = movieId.HasValue
+                ? $"/Movies/Details/{movieId.Value}?cinemaId={cinema.CinemaId}"
+                : $"/Screenings?cinemaId={cinema.CinemaId}&date={today}{(hallType != null ? $"&hallType={hallType}" : "")}";
+
+            <a href="@cardHref"
+               class="cinema-card">
+                <div class="cinema-city">
+                    <i class="bi bi-geo-alt-fill"></i> @cinema.City
+                </div>
+                <div class="cinema-name">@cinema.Name.ToUpper()</div>
+                <div class="cinema-address">
+                    <i class="bi bi-map"></i> @cinema.Address
+                </div>
+                @if (cinema.Phone != null)
+                {
+                    <div class="cinema-address">
+                        <i class="bi bi-telephone"></i> @cinema.Phone
+                    </div>
+                }
+                <div class="cinema-halls">
+                    <i class="bi bi-display"></i> @cinema.Halls.Count sal:
+                    @foreach (var ht in hallTypes)
+                    {
+                        <span>@ht.Count× @ht.Label</span>
+                    }
+                </div>
+            </a>
+        }
+    </div>
+</div>
+

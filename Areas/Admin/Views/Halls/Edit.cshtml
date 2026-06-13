@@ -1,0 +1,64 @@
+@model Hall
+@{
+    ViewData["Title"] = "Edit Hall";
+    var config = ViewBag.LayoutConfig as CinePlex.Models.HallLayoutConfig;
+    var existingRowsJson = config?.GetRowsJson() ?? "[]";
+    var existingAislesJson = config?.GetAislesJson() ?? "[]";
+    var existingReverseNumbering = config?.ReverseNumbering ?? false;
+}
+<div class="card p-4">
+    <h3 class="mb-4">Edit Hall</h3>
+    <form asp-action="Edit" method="post" id="hallForm">
+        <input type="hidden" asp-for="HallId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label asp-for="CinemaId" class="form-label">Cinema</label>
+                <select asp-for="CinemaId" asp-items="ViewBag.Cinemas" class="form-select"></select>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Number" class="form-label"></label>
+                <input asp-for="Number" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Type" class="form-label"></label>
+                <select asp-for="Type" asp-items="Html.GetEnumSelectList<HallType>()" class="form-select"></select>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <h5 class="mb-3">Seat Layout</h5>
+                <div id="rowCards"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="addRowBtn">
+                    <i class="bi bi-plus"></i> Add row
+                </button>
+                <div class="mt-3">
+                    <label class="form-label small">Aisles after columns <span class="text-muted">(comma-separated, 1-indexed)</span></label>
+                    <input type="text" id="aisleInput" class="form-control" />
+                </div>
+                <div class="form-check mt-2">
+                    <input type="checkbox" class="form-check-input" id="reverseNumberingChk">
+                    <label class="form-check-label small text-muted" for="reverseNumberingChk">Reverse seat numbering</label>
+                </div>
+                <input type="hidden" name="layoutJson" id="layoutJson" />
+                <input type="hidden" asp-for="Capacity" id="capacityField" />
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-red"><i class="bi bi-check-circle"></i> Save</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <h5 class="mb-3">Preview</h5>
+                <div class="card p-3" style="position:sticky;top:1rem;overflow:hidden;">
+                    <div id="hallPreview"></div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/hall-editor.js" asp-append-version="true"></script>
+    <script>initHallEditor(@Html.Raw(existingRowsJson), @Html.Raw(existingAislesJson), @Html.Raw(existingReverseNumbering.ToString().ToLower()));</script>
+}

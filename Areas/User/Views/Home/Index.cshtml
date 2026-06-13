@@ -1,0 +1,383 @@
+﻿@{
+    ViewData["Title"] = "Home";
+    var comingSoon = ViewBag.ComingSoonMovies as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var latest = ViewBag.LatestMovies as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var cinemas = ViewBag.Cinemas as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    int idx = 0;
+}
+
+<style>
+.hp-hero {
+    position: relative;
+    min-height: calc(100vh - 112px);
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    padding-bottom: 5rem;
+}
+.hp-content {
+    position: relative;
+    max-width: 820px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 3rem 1.5rem 0;
+}
+.hp-eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .8rem;
+    margin-bottom: 1.8rem;
+}
+.hp-eyebrow-line {
+    display: block;
+    width: 36px;
+    height: 1px;
+}
+.hp-cta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.btn-hp-primary {
+    padding: .85rem 2.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    text-decoration: none;
+    border: 1px solid currentColor;
+    border-radius: .375rem;
+}
+.hp-section {
+    padding: 5rem 0;
+}
+.hp-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+.hp-sec-num { flex-shrink: 0; }
+.hp-sec-title { flex-shrink: 0; }
+.hp-sec-rule {
+    flex: 1;
+    height: 1px;
+}
+.hp-sec-link {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    text-decoration: none;
+}
+.hp-strip-wrap {
+    overflow-x: auto;
+    scrollbar-width: none;
+    cursor: grab;
+}
+.hp-strip-wrap::-webkit-scrollbar { display: none; }
+.hp-strip-wrap:active { cursor: grabbing; }
+.hp-strip {
+    display: flex;
+    gap: 0;
+    width: max-content;
+}
+.hp-movie {
+    flex: 0 0 190px;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: block;
+}
+.hp-movie-poster {
+    aspect-ratio: 2/3;
+    position: relative;
+    overflow: hidden;
+}
+.hp-movie-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.hp-movie-num {
+    position: absolute;
+    top: .8rem;
+    left: .8rem;
+    line-height: 1;
+    pointer-events: none;
+}
+.hp-movie-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1rem .9rem;
+}
+.hp-movie-book-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    text-align: center;
+    padding: .55rem 0;
+}
+.hp-soon {
+    display: flex;
+    height: 172px;
+    text-decoration: none;
+    overflow: hidden;
+}
+.hp-soon-thumb {
+    flex: 0 0 115px;
+    overflow: hidden;
+}
+.hp-soon-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.hp-soon-nothumb {
+    width: 115px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.hp-soon-body {
+    padding: 1.1rem 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    min-width: 0;
+}
+.hp-soon-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hp-soon-meta {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+}
+.hp-soon-badge {
+    padding: .22em .7em;
+    margin-left: auto;
+}
+.hp-cinema-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.3rem 0;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+.hp-ci-num {
+    width: 2.5rem;
+    flex-shrink: 0;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+}
+.hp-ci-name {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+.hp-ci-city {
+    position: relative;
+    z-index: 1;
+}
+.hp-ci-arrow {
+    position: relative;
+    z-index: 1;
+}
+</style>
+
+<section class="hp-hero">
+    <div class="container">
+        <div class="hp-content">
+            <p class="hp-eyebrow">
+                <span class="hp-eyebrow-line"></span>
+                Kinowe doświadczenie
+            </p>
+            <h1 class="hp-title">
+                TWOJE
+                <br />
+                KINO.
+                <span class="hp-title-red">TWÓJ STYL.</span>
+            </h1>
+            <p class="hp-desc">
+                Odkryj hity kinowe, zarezerwuj idealne miejsce i przeżyj magię dużego ekranu jak nigdy wcześniej.
+            </p>
+            <div class="hp-cta">
+                <a asp-controller="Screenings" asp-action="Index" class="btn-hp-primary">
+                    <i class="bi bi-calendar3"></i> Repertuar
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="hp-section">
+    <div class="container">
+        <div class="hp-section-head">
+            <span class="hp-sec-num">01</span>
+            <h2 class="hp-sec-title">W Kinach</h2>
+            <div class="hp-sec-rule"></div>
+            <a asp-controller="Movies" asp-action="Index" class="hp-sec-link">Wszystkie <i class="bi bi-arrow-right"></i></a>
+        </div>
+    </div>
+
+    @if (latest.Any())
+    {
+        <div class="hp-strip-wrap">
+            <div class="hp-strip" id="movieStrip">
+                @{ int mIdx = 0; }
+                @foreach (var m in latest)
+                {
+                    mIdx++;
+                    <a class="hp-movie" asp-controller="Screenings" asp-action="Index" asp-route-movieId="@m.MovieId">
+                        <div class="hp-movie-poster">
+                            @if (!string.IsNullOrWhiteSpace((string)m.PosterUrl))
+                            {
+                                <img src="@m.PosterUrl" alt="@m.Title" loading="lazy" />
+                            }
+                            else
+                            {
+                                <div style="width:100%;height:100%;background:#0a0808;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.08);font-size:3rem;"><i class="bi bi-film"></i></div>
+                            }
+                            <div class="hp-movie-num" aria-hidden="true">@mIdx.ToString("D2")</div>
+                            <div class="hp-movie-overlay">
+                                <div class="hp-movie-genre-tag">@m.Genre</div>
+                                <h3 class="hp-movie-name">@m.Title</h3>
+                            </div>
+                        </div>
+                        <div class="hp-movie-book-bar" aria-hidden="true">ZAREZERWUJ</div>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="container">
+            <p class="text-muted">Brak aktualnych seansów.</p>
+        </div>
+    }
+</section>
+
+@if (comingSoon.Any())
+{
+    <section class="hp-section">
+        <div class="container">
+            <div class="hp-section-head">
+                <span class="hp-sec-num">02</span>
+                <h2 class="hp-sec-title">Wkrótce</h2>
+                <div class="hp-sec-rule"></div>
+                <a asp-controller="ComingSoon" asp-action="Index" class="hp-sec-link">Wszystkie <i class="bi bi-arrow-right"></i></a>
+            </div>
+
+            <div class="row g-3">
+                @{ int sIdx = 0; }
+                @foreach (var m in comingSoon)
+                {
+                    sIdx++;
+                    <div class="col-md-6 col-lg-4">
+                        <a asp-controller="ComingSoon" asp-action="Details" asp-route-id="@m.MovieId" class="hp-soon d-flex h-100">
+                            @if (!string.IsNullOrWhiteSpace((string)m.PosterUrl))
+                            {
+                                <div class="hp-soon-thumb">
+                                    <img src="@m.PosterUrl" alt="@m.Title" loading="lazy" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="hp-soon-nothumb"><i class="bi bi-film"></i></div>
+                            }
+                            <div class="hp-soon-body">
+                                <div class="hp-soon-date-block">
+                                    <div class="hp-soon-day">@(((DateTime)m.ReleaseDate).Day.ToString("D2"))</div>
+                                    <div class="hp-soon-mo">@(((DateTime)m.ReleaseDate).ToString("MMMM yyyy"))</div>
+                                </div>
+                                <h3 class="hp-soon-title">@m.Title</h3>
+                                <div class="hp-soon-meta">
+                                    <span class="hp-soon-genre-lbl">@m.Genre</span>
+                                    <span class="hp-soon-dur"><i class="bi bi-clock" style="font-size:.6rem;margin-right:.2rem;"></i>@m.Duration min</span>
+                                    <span class="hp-soon-badge">Premiera</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+@if (cinemas.Any())
+{
+    <section class="hp-section">
+        <div class="container">
+            <div class="hp-section-head">
+                <span class="hp-sec-num">03</span>
+                <h2 class="hp-sec-title">Nasze Kina</h2>
+                <div class="hp-sec-rule"></div>
+                <a asp-controller="Cinemas" asp-action="Index" class="hp-sec-link">Wszystkie <i class="bi bi-arrow-right"></i></a>
+            </div>
+
+            <div class="hp-cinema-list">
+                @{ int cIdx = 0; }
+                @foreach (var c in cinemas)
+                {
+                    cIdx++;
+                    <a asp-controller="Cinemas" asp-action="Details" asp-route-id="@c.CinemaId"
+                       class="hp-cinema-item">
+                        <span class="hp-ci-num" aria-hidden="true">@cIdx.ToString("D2")</span>
+                        <span class="hp-ci-name">@c.Name</span>
+                        <span class="hp-ci-city"><i class="bi bi-geo-alt me-1"></i>@c.City</span>
+                        <i class="bi bi-arrow-right hp-ci-arrow"></i>
+                    </a>
+                }
+            </div>
+        </div>
+    </section>
+}
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    var strip = document.querySelector('.hp-strip-wrap');
+    if (strip) {
+        var isDown = false, startX, scrollLeft;
+        strip.addEventListener('mousedown', function (e) {
+            isDown = true;
+            startX = e.pageX - strip.offsetLeft;
+            scrollLeft = strip.scrollLeft;
+        });
+        strip.addEventListener('mouseleave', function () { isDown = false; });
+        strip.addEventListener('mouseup', function () { isDown = false; });
+        strip.addEventListener('mousemove', function (e) {
+            if (!isDown) return;
+            e.preventDefault();
+            var x = e.pageX - strip.offsetLeft;
+            strip.scrollLeft = scrollLeft - (x - startX) * 1.4;
+        });
+        strip.addEventListener('wheel', function (e) {
+            if (e.deltaY === 0) return;
+            e.preventDefault();
+            strip.scrollLeft += e.deltaY * 2.5;
+        }, { passive: false });
+    }
+})();
+</script>
+}

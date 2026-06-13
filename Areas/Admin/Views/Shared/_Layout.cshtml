@@ -1,0 +1,78 @@
+﻿@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    string ActiveIf(string c) => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin - @ViewData["Title"] - CinePlex</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div class="admin-wrap">
+        <aside class="admin-sidebar">
+            <a class="brand" href="/">CINE<span class="accent">PLEX</span></a>
+            <ul class="nav flex-column">
+                <li><a class="nav-link @ActiveIf("Statistics")" asp-area="Admin" asp-controller="Statistics" asp-action="Index"><span>Dashboard</span></a></li>
+                <li><a class="nav-link @ActiveIf("Movies")" asp-area="Admin" asp-controller="Movies" asp-action="Index"><span>Movies</span></a></li>
+                <li><a class="nav-link @ActiveIf("Cinemas")" asp-area="Admin" asp-controller="Cinemas" asp-action="Index"><span>Cinemas</span></a></li>
+                <li><a class="nav-link @ActiveIf("Halls")" asp-area="Admin" asp-controller="Halls" asp-action="Index"><span>Halls</span></a></li>
+                <li><a class="nav-link @ActiveIf("Screenings")" asp-area="Admin" asp-controller="Screenings" asp-action="Index"><span>Screenings</span></a></li>
+                <li><a class="nav-link @ActiveIf("Marathons")" asp-area="Admin" asp-controller="Marathons" asp-action="Index"><span>Marathons</span></a></li>
+                <li><a class="nav-link @ActiveIf("Reservations")" asp-area="Admin" asp-controller="Reservations" asp-action="Index"><span>Reservations</span></a></li>
+                <li><a class="nav-link @ActiveIf("Users")" asp-area="Admin" asp-controller="Users" asp-action="Index"><span>Users</span></a></li>
+                <li><a class="nav-link @ActiveIf("Reviews")" asp-area="Admin" asp-controller="Reviews" asp-action="Index"><span>Reviews</span></a></li>
+                <li><a class="nav-link @ActiveIf("BarItems")" asp-area="Admin" asp-controller="BarItems" asp-action="Index"><span>Bar</span></a></li>
+                <li><a class="nav-link @ActiveIf("Pricing")" asp-area="Admin" asp-controller="Pricing" asp-action="Index"><span>Pricing</span></a></li>
+            </ul>
+        </aside>
+        <div class="admin-main">
+            <div class="admin-topbar">
+                <div>
+                    <h4 class="mb-0">@ViewData["Title"]</h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb small mb-0">
+                            <li class="breadcrumb-item"><a asp-area="Admin" asp-controller="Statistics" asp-action="Index">Admin</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">@controller</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted small d-none d-md-inline">@(User.Identity?.Name)</span>
+                    <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-right"></i> Logout</button>
+                    </form>
+                </div>
+            </div>
+            <main class="admin-content">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill"></i> @TempData["Success"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Error"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

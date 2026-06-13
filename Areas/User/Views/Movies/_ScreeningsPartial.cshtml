@@ -1,0 +1,69 @@
+@using System.Globalization
+@{
+    var pl = new CultureInfo("pl-PL");
+    int? cinemaId = ViewBag.CinemaId as int?;
+    var dayStrip = ViewBag.DayStrip as List<DateTime> ?? new List<DateTime>();
+    var selectedDate = ViewBag.SelectedDate is DateTime sd ? sd : DateTime.Today;
+    int movieId = (int)(ViewBag.MovieId ?? 0);
+    string DayAbbr(DateTime d) => d.Date == DateTime.Today
+        ? "Dziś"
+        : pl.DateTimeFormat.GetAbbreviatedDayName(d.DayOfWeek).ToUpper().TrimEnd('.');
+}
+
+@if (cinemaId.HasValue)
+{
+    <div class="day-strip mb-3">
+        @foreach (var day in dayStrip)
+        {
+            var isActive = day.Date == selectedDate.Date;
+            var dayUrl = $"/Movies/Details/{movieId}?cinemaId={cinemaId}&date={day:yyyy-MM-dd}";
+            <a href="@dayUrl" class="day-btn @(isActive ? "active" : "")">@DayAbbr(day)</a>
+        }
+    </div>
+    <div style="font-size:.78rem;font-weight:700;letter-spacing:1px;color:var(--text-muted);margin-bottom:1rem;">
+        @selectedDate.ToString("dddd dd/MM/yyyy", pl).ToUpper()
+    </div>
+
+    @if (ViewBag.ScreeningGroups != null)
+    {
+        var groups = (IEnumerable<dynamic>)ViewBag.ScreeningGroups;
+        if (!groups.Any())
+        {
+            <div style="text-align:center;padding:2rem 0;color:var(--text-muted);">
+                <i class="bi bi-calendar-x" style="font-size:1.8rem;display:block;margin-bottom:.5rem;"></i>
+                <p style="margin:0;">Brak seansów w wybranym dniu.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (dynamic hallGroup in groups)
+            {
+                <div class="mb-3">
+                    <div class="hall-type-label">@hallGroup.Label</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (dynamic slot in hallGroup.Slots)
+                        {
+                            var soldOut = (bool)slot.SoldOut;
+                            var slotClass = soldOut ? "slot-btn sold-out" : "slot-btn";
+                            if (soldOut)
+                            {
+                                <span class="@slotClass">@slot.TimeLabel</span>
+                            }
+                            else
+                            {
+                                <a class="@slotClass" href="/Screenings/Details/@slot.ScreeningId">@slot.TimeLabel</a>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        }
+    }
+}
+else
+{
+    <div style="text-align:center;padding:2.5rem 0;color:var(--text-muted);">
+        <i class="bi bi-geo-alt" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
+        <p style="margin:0;">Wybierz kino z listy powyżej, aby zobaczyć dostępne seanse.</p>
+    </div>
+}

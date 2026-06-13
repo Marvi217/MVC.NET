@@ -1,0 +1,120 @@
+﻿@model IEnumerable<Hall>
+@using CinePlex.Models
+@{
+    ViewData["Title"] = "Sale";
+    int? cid = ViewBag.CinemaId;
+    var cinemas = ViewBag.Cinemas as IEnumerable<Cinema> ?? Enumerable.Empty<Cinema>();
+
+    string CinemaLink(int? c) => Url.Action("Index", new { cinemaId = c })!;
+
+    string TypeLabel(HallType t) => t switch {
+        HallType.ThreeD => "3D", HallType.IMAX => "IMAX", HallType.FourD => "4DX", _ => "Standard"
+    };
+    string TypeColor(HallType t) => t switch {
+        HallType.IMAX   => "var(--red)",
+        HallType.ThreeD => "#3b82f6",
+        HallType.FourD  => "#8b5cf6",
+        _               => "#555"
+    };
+
+    var groups = cid.HasValue
+        ? Model.GroupBy(h => h.CinemaId).ToList()
+        : Model.GroupBy(h => h.CinemaId).ToList();
+}
+
+<style>
+    .cinema-tabs { display:flex; gap:.4rem; flex-wrap:wrap; }
+    .cinema-tab {
+        padding:.4rem 1.1rem;
+        text-decoration:none; white-space:nowrap;
+    }
+    .cinema-section { margin-bottom:2.5rem; }
+    .cinema-section-title {
+        padding:.4rem 0;
+        margin-bottom:1rem;
+    }
+    .halls-grid {
+        display:grid;
+        grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+        gap:1rem;
+    }
+    .hall-card {
+        padding:1.25rem;
+        display:flex; flex-direction:column; gap:.75rem;
+    }
+    .hall-card-top { display:flex; justify-content:space-between; align-items:flex-start; }
+    .hall-number { line-height:1; }
+    .hall-type-badge { padding:.2rem .6rem; }
+    .hall-actions { display:flex; gap:.4rem; margin-top:auto; }
+</style>
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+    <div>
+        <h4 class="mb-2">Sale kinowe</h4>
+        <div class="cinema-tabs">
+            <a href="@CinemaLink(null)" class="cinema-tab @(cid == null ? "active" : "")">Wszystkie kina</a>
+            @foreach (var c in cinemas)
+            {
+                <a href="@CinemaLink(c.CinemaId)" class="cinema-tab @(cid == c.CinemaId ? "active" : "")">@c.Name</a>
+            }
+        </div>
+    </div>
+    <a asp-action="Create" class="btn btn-red btn-sm"><i class="bi bi-plus-circle me-1"></i> Nowa sala</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-building" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
+        Brak sal. <a asp-action="Create">Dodaj pierwszą.</a>
+    </div>
+}
+else
+{
+    @foreach (var group in groups)
+    {
+        var cinema = group.First().Cinema;
+        <div class="cinema-section">
+            @if (cid == null)
+            {
+                <div class="cinema-section-title">
+                    @cinema?.Name <small style="font-size:.75rem;color:#555;">- @cinema?.City</small>
+                </div>
+            }
+            <div class="halls-grid">
+                @foreach (var hall in group)
+                {
+                    var config = HallLayoutConfig.FromJson(hall.LayoutJson);
+                    var rowCount = config?.Rows.Count ?? 0;
+                    var typeColor = TypeColor(hall.Type);
+                    <div class="hall-card">
+                        <div class="hall-card-top">
+                            <div class="hall-number">@hall.Number</div>
+                            <span class="hall-type-badge" style="color:@typeColor;border-color:@typeColor;">
+                                @TypeLabel(hall.Type)
+                            </span>
+                        </div>
+                        <div class="hall-capacity">
+                            <strong>@hall.Capacity</strong> miejsc
+                            @if (rowCount > 0)
+                            {
+                                <div class="hall-layout-hint">@rowCount rzędów</div>
+                            }
+                        </div>
+                        <div class="hall-actions">
+                            <a asp-action="Edit" asp-route-id="@hall.HallId" class="btn btn-sm btn-outline-secondary flex-fill">
+                                <i class="bi bi-pencil me-1"></i>Edytuj
+                            </a>
+                            <a asp-action="Details" asp-route-id="@hall.HallId" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@hall.HallId" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}

@@ -1,0 +1,223 @@
+@model CinePlex.ViewModels.CheckoutViewModel
+@{
+    ViewData["Title"] = "Checkout";
+    var screening   = ViewBag.Screening as CinePlex.Models.Screening;
+    var seatDetails = ViewBag.SeatDetails as List<CinePlex.ViewModels.SeatDetail> ?? new();
+    decimal total   = ViewBag.TotalPrice is decimal t ? t : 0m;
+    bool isAuth     = User.Identity?.IsAuthenticated == true;
+    string? payErr  = ViewBag.PaymentError as string;
+}
+
+<style>
+.checkout-card { padding: 1.75rem; margin-bottom: 1.5rem; }
+.checkout-section-title { margin-bottom: 1rem; padding-bottom: .5rem; }
+.seat-row-item { display: flex; justify-content: space-between; align-items: center; padding: .45rem 0; }
+.seat-label-badge { min-width: 40px; text-align: center; padding: .1rem .55rem; }
+.total-row { display: flex; justify-content: space-between; align-items: center; padding-top: .75rem; margin-top: .5rem; }
+.pay-method-btn { display: flex; flex-direction: column; align-items: center; gap: .35rem; padding: .8rem 1.6rem; cursor: pointer; }
+.pay-method-btn i { font-size: 1.4rem; }
+.card-fields input { padding: .5rem .8rem; width: 100%; }
+.card-fields label { margin-bottom: .3rem; display: block; }
+.card-number-wrap { position: relative; }
+.card-icon { position: absolute; right: .75rem; top: 50%; transform: translateY(-50%); pointer-events: none; }
+</style>
+
+<div class="container py-4">
+    <a asp-controller="Screenings" asp-action="Details" asp-route-id="@Model.ScreeningId" class="text-muted small d-inline-block mb-3">
+        <i class="bi bi-arrow-left"></i> Powrót do wyboru miejsc
+    </a>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:2px;margin-bottom:1.5rem;">CHECKOUT</h1>
+
+    @if (!string.IsNullOrEmpty(payErr))
+    {
+        <div class="alert-payment-error">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>@payErr</strong>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger mb-3">@TempData["Error"]</div>
+    }
+
+    <form asp-action="Process" method="post" id="checkoutForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ScreeningId" value="@Model.ScreeningId" />
+        @foreach (var s in Model.SeatNumbers)
+        {
+            <input type="hidden" name="SeatNumbers" value="@s" />
+        }
+        <input type="hidden" name="PaymentMethod" id="paymentMethodInput" value="card" />
+
+        <div class="row g-4">
+            
+            <div class="col-lg-7">
+
+                @if (screening != null)
+                {
+                    <div class="checkout-card" style="padding:1rem 1.2rem;margin-bottom:1rem;">
+                        <div class="d-flex gap-3 align-items-center">
+                            @if (!string.IsNullOrEmpty(screening.Movie?.PosterUrl))
+                            {
+                                <img src="@screening.Movie.PosterUrl" style="height:64px;border-radius:6px;flex-shrink:0;" />
+                            }
+                            <div>
+                                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1px;">@screening.Movie?.Title?.ToUpper()</div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-building"></i> @screening.Hall?.Cinema?.Name · @screening.Hall?.Cinema?.City
+                                    &nbsp;|&nbsp; <i class="bi bi-clock"></i> @screening.StartTime.ToString("dd.MM.yyyy HH:mm")
+                                    &nbsp;|&nbsp; Sala #@screening.Hall?.Number
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="checkout-card">
+                    <div class="checkout-section-title"><i class="bi bi-ticket-perforated me-2"></i>BILETY</div>
+                    @foreach (var seat in seatDetails)
+                    {
+                        <div class="seat-row-item">
+                            <span><span class="seat-label-badge">@seat.Label</span></span>
+                            <span style="font-weight:600;">@seat.Price.ToString("0.00") zł</span>
+                        </div>
+                    }
+                    <div class="total-row">
+                        <span style="font-weight:700;">ŁĄCZNIE</span>
+                        <span style="font-size:1.4rem;font-weight:800;color:#ffa500;">@total.ToString("0.00") zł</span>
+                    </div>
+                </div>
+
+                @if (!isAuth)
+                {
+                    <div class="checkout-card">
+                        <div class="checkout-section-title"><i class="bi bi-person me-2"></i>DANE KUPUJĄCEGO</div>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label small">Imię <span class="text-danger">*</span></label>
+                                <input type="text" name="FirstName" class="form-control" value="@Model.FirstName" required placeholder="Jan" />
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small">Nazwisko <span class="text-danger">*</span></label>
+                                <input type="text" name="LastName" class="form-control" value="@Model.LastName" required placeholder="Kowalski" />
+                            </div>
+                            <div class="col-sm-8">
+                                <label class="form-label small">E-mail <span class="text-danger">*</span></label>
+                                <input type="email" name="Email" class="form-control" value="@Model.Email" required placeholder="jan@example.com" />
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label small">Telefon <span class="text-muted">(opcjonalnie)</span></label>
+                                <input type="tel" name="Phone" class="form-control" value="@Model.Phone" placeholder="+48 000 000 000" />
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            
+            <div class="col-lg-5">
+                <div class="checkout-card">
+                    <div class="checkout-section-title"><i class="bi bi-credit-card me-2"></i>METODA PŁATNOŚCI</div>
+
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="pay-method-btn active" onclick="setMethod(this,'card')">
+                            <i class="bi bi-credit-card-2-front"></i> Karta
+                        </button>
+                        <button type="button" class="pay-method-btn" onclick="setMethod(this,'blik')">
+                            <i class="bi bi-phone"></i> BLIK
+                        </button>
+                    </div>
+
+                    
+                    <div id="cardFields" class="card-fields">
+                        <div class="mb-3">
+                            <label>Numer karty</label>
+                            <div class="card-number-wrap">
+                                <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456"
+                                       maxlength="19" inputmode="numeric" autocomplete="cc-number"
+                                       oninput="fmtCard(this)" />
+                                <i class="bi bi-credit-card card-icon" id="cardBrand"></i>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label>Data ważności</label>
+                                <input type="text" id="cardExpiry" placeholder="MM / YY"
+                                       maxlength="7" inputmode="numeric"
+                                       oninput="fmtExpiry(this)" />
+                            </div>
+                            <div class="col-6">
+                                <label>CVC</label>
+                                <input type="text" id="cardCvc" placeholder="123"
+                                       maxlength="4" inputmode="numeric" />
+                            </div>
+                        </div>
+                        <div>
+                            <label>Imię i nazwisko na karcie</label>
+                            <input type="text" id="cardName" placeholder="JAN KOWALSKI"
+                                   style="text-transform:uppercase;" />
+                        </div>
+                    </div>
+
+                    
+                    <div id="blikFields" class="blik-field" style="display:none;">
+                        <label style="font-size:.72rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:.5rem;">
+                            Kod BLIK (6 cyfr)
+                        </label>
+                        <input type="text" id="blikCode" placeholder="000 000"
+                               maxlength="7" inputmode="numeric"
+                               oninput="fmtBlik(this)"
+                               style="border-radius:8px;padding:.6rem .8rem;font-size:1.4rem;font-family:'JetBrains Mono',monospace;letter-spacing:.5rem;text-align:center;width:100%;" />
+                        <p class="text-muted small mt-2 mb-0">Otwórz aplikację bankową i wygeneruj kod BLIK.</p>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <a asp-controller="Screenings" asp-action="Details" asp-route-id="@Model.ScreeningId"
+                       class="btn btn-outline-secondary flex-grow-1">
+                        <i class="bi bi-x"></i> Anuluj
+                    </a>
+                    <button type="submit" class="btn btn-orange flex-grow-1 btn-lg">
+                        <i class="bi bi-lock-fill me-1"></i> Zapłać
+                    </button>
+                </div>
+                <p class="text-muted small mt-2 text-center">
+                    <i class="bi bi-shield-check me-1"></i> Bezpieczna symulacja transakcji
+                </p>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function setMethod(btn, method) {
+    document.querySelectorAll('.pay-method-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('paymentMethodInput').value = method;
+    document.getElementById('cardFields').style.display = method === 'card' ? 'block' : 'none';
+    document.getElementById('blikFields').style.display = method === 'blik'  ? 'block' : 'none';
+}
+
+function fmtCard(el) {
+    var v = el.value.replace(/\D/g, '').slice(0, 16);
+    el.value = v.replace(/(.{4})/g, '$1 ').trim();
+    var icon = document.getElementById('cardBrand');
+    if (v.startsWith('4')) icon.className = 'bi bi-credit-card card-icon';
+    else if (/^5[1-5]/.test(v)) icon.className = 'bi bi-credit-card-2-back card-icon';
+    else icon.className = 'bi bi-credit-card card-icon';
+}
+
+function fmtExpiry(el) {
+    var v = el.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length >= 3) el.value = v.slice(0,2) + ' / ' + v.slice(2);
+    else el.value = v;
+}
+
+function fmtBlik(el) {
+    var v = el.value.replace(/\D/g, '').slice(0, 6);
+    el.value = v.length > 3 ? v.slice(0,3) + ' ' + v.slice(3) : v;
+}
+</script>
+}

@@ -1,0 +1,38 @@
+@model Cinema
+@{
+    ViewData["Title"] = Model.Name;
+}
+<div class="card p-3 mb-3">
+    <h3>@Model.Name <span class="city-badge ms-2">@Model.City</span></h3>
+    <table class="table table-dark-cinema mb-0">
+        <tr><th>Address</th><td>@Model.Address</td></tr>
+        <tr><th>Phone</th><td>@Model.Phone</td></tr>
+        <tr><th>Email</th><td>@Model.Email</td></tr>
+        <tr><th>Description</th><td>@Model.Description</td></tr>
+    </table>
+</div>
+<div class="card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Halls</h5>
+        <a asp-controller="Halls" asp-action="Create" asp-route-cinemaId="@Model.CinemaId" class="btn btn-sm btn-red"><i class="bi bi-plus"></i> Add Hall</a>
+    </div>
+    <table class="table table-dark-cinema mb-0">
+        <thead><tr><th>#</th><th>Type</th><th>Capacity</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var h in Model.Halls ?? new List<Hall>())
+            {
+                <tr>
+                    <td>@h.Number</td>
+                    <td><span class="badge-hall @h.Type.ToString().ToLower()">@(h.Type switch { CinePlex.Models.HallType.FourD => "4DX", CinePlex.Models.HallType.ThreeD => "3D", CinePlex.Models.HallType.IMAX => "IMAX", _ => "2D" })</span></td>
+                    <td>@h.Capacity</td>
+                    <td class="text-end"><a asp-controller="Halls" asp-action="Edit" asp-route-id="@h.HallId" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="mt-3 d-flex gap-2">
+    <a asp-action="Edit" asp-route-id="@Model.CinemaId" class="btn btn-outline-warning"><i class="bi bi-pencil"></i> Edit</a>
+    <a asp-action="Delete" asp-route-id="@Model.CinemaId" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete</a>
+    <a asp-action="Index" class="btn btn-outline-secondary">Back</a>
+</div>

@@ -1,0 +1,66 @@
+@model CinePlex.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<style>
+    .auth-page {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .auth-card {
+        width: 100%;
+        max-width: 440px;
+        position: relative;
+        z-index: 1;
+        padding: 2.5rem;
+    }
+    .ul-wrap { position: relative; }
+    .form-label-ul { margin-bottom: .35rem; display: block; }
+    .auth-hr { margin: 1.5rem 0; }
+</style>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="text-center mb-4">
+            <a class="auth-logo" asp-controller="Home" asp-action="Index">CINE<span class="accent">PLEX</span></a>
+            <p class="text-muted small mt-1 mb-0">Welcome back</p>
+        </div>
+
+        <form asp-action="Login" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+            <div class="mb-4">
+                <label asp-for="Email" class="form-label-ul"></label>
+                <div class="ul-wrap">
+                    <input asp-for="Email" class="form-control form-control-ul" placeholder="you@example.com" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Password" class="form-label-ul"></label>
+                <div class="ul-wrap">
+                    <input asp-for="Password" type="password" class="form-control form-control-ul" placeholder="••••••••" />
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <div class="form-check mb-4">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label small text-muted"></label>
+            </div>
+
+            <button type="submit" class="btn btn-red w-100 btn-lg btn-shimmer">Login</button>
+        </form>
+
+        <hr class="auth-hr" />
+        <p class="text-center small mb-0 text-muted">No account? <a asp-action="Register">Create one</a></p>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

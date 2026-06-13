@@ -1,0 +1,17 @@
+@model Movie
+@{
+    ViewData["Title"] = "Delete Movie";
+}
+<div class="card p-4">
+    <h3 class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Confirm Delete</h3>
+    <p>Are you sure you want to delete <strong>@Model.Title</strong>? This cannot be undone.</p>
+    <table class="table table-dark-cinema">
+        <tr><th>Title</th><td>@Model.Title</td></tr>
+        <tr><th>Genre</th><td>@Model.Genre</td></tr>
+        <tr><th>Released</th><td>@Model.ReleaseDate.ToString("yyyy-MM-dd")</td></tr>
+    </table>
+    <form asp-action="Delete" asp-route-id="@Model.MovieId" method="post" data-confirm-delete>
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Yes, Delete</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

@@ -1,0 +1,233 @@
+@model Movie
+@using CinePlex.Models
+@{
+    ViewData["Title"] = Model.Title;
+    var embedUrl   = ViewBag.EmbedUrl as string;
+    int? cinemaId  = ViewBag.CinemaId as int?;
+    string? cinemaName = ViewBag.CinemaName as string;
+    var reviews    = ViewBag.Reviews    as IEnumerable<MovieReview> ?? Enumerable.Empty<MovieReview>();
+    var userReview = ViewBag.UserReview as MovieReview;
+    double? avgRating = ViewBag.AverageRating as double?;
+    int reviewCount   = ViewBag.ReviewCount is int rc ? rc : 0;
+}
+
+<style>
+.slot-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: .35rem .85rem; text-decoration: none;
+}
+.slot-btn.sold-out { pointer-events: none; }
+.hall-type-label { margin-bottom: .4rem; }
+.day-strip { display: flex; gap: .5rem; flex-wrap: wrap; }
+.day-btn {
+    padding: .3rem .85rem;
+    text-decoration: none;
+}
+</style>
+
+<div class="container py-4">
+    <a asp-action="Index" class="text-muted small d-inline-block mb-3"><i class="bi bi-arrow-left"></i> Back to movies</a>
+    <div class="row g-4">
+        <div class="col-md-4">
+            @if (!string.IsNullOrWhiteSpace(Model.PosterUrl))
+            {
+                <img src="@Model.PosterUrl" alt="@Model.Title" class="poster-thumb shadow-lg" />
+            }
+            else
+            {
+                <div class="poster-thumb d-flex align-items-center justify-content-center"><i class="bi bi-film" style="font-size:5rem;color:#333;"></i></div>
+            }
+        </div>
+        <div class="col-md-8">
+            <div class="d-flex gap-2 mb-2 flex-wrap align-items-center">
+                <span class="badge-genre">@Model.Genre</span>
+                <span class="badge-age">@Model.AgeRating</span>
+                <span class="duration-pill"><i class="bi bi-clock"></i> @Model.Duration min</span>
+                <span class="duration-pill"><i class="bi bi-calendar3"></i> @Model.ReleaseDate.ToString("yyyy-MM-dd")</span>
+                @if (avgRating.HasValue)
+                {
+                    <span class="duration-pill"><i class="bi bi-star-fill" style="color:#fbbf24;"></i> @avgRating.Value.ToString("0.0") <span style="color:#888;font-size:.8em;">(@reviewCount)</span></span>
+                }
+            </div>
+            <h1 class="display-4">@Model.Title</h1>
+            @if (Model.Director != null)
+            {
+                <p class="mb-3" style="color:#888;">Directed by <a asp-controller="Directors" asp-action="Details" asp-route-id="@Model.Director.DirectorId" style="color:inherit;">@Model.Director.FullName</a></p>
+            }
+            <p class="lead">@Model.Description</p>
+        </div>
+    </div>
+
+    @if (embedUrl != null)
+    {
+        <div class="mt-5">
+            <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;margin-bottom:1rem;">ZWIASTUN</h4>
+            <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;background:#000;">
+                <iframe src="@embedUrl"
+                        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                        allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                </iframe>
+            </div>
+            <div class="mt-2 text-end">
+                <a href="@Model.TrailerUrl" target="_blank" class="text-muted small">
+                    <i class="bi bi-youtube" style="color:#ff0000;"></i> Obejrzyj na YouTube
+                </a>
+            </div>
+        </div>
+    }
+
+    <div class="mt-5">
+        <div class="d-flex align-items-center justify-content-between mb-3" style="border-bottom:1px solid var(--border);padding-bottom:.6rem;gap:1rem;flex-wrap:wrap;">
+            <h4 id="screenings-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;margin:0;">
+                SEANSE<span id="cinema-name-label">@(cinemaName != null ? " · " + cinemaName.ToUpper() : "")</span>
+            </h4>
+            <select id="cinema-select"
+                    style="cursor:pointer;min-width:180px;">
+                <option value="">Wybierz kino…</option>
+                @foreach (var c in (IEnumerable<CinePlex.Models.Cinema>)ViewBag.AllCinemas)
+                {
+                    <option value="@c.CinemaId" selected="@(c.CinemaId == cinemaId ? "selected" : null)">
+                        @c.Name · @c.City
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div id="screenings-panel">
+            @await Html.PartialAsync("_ScreeningsPartial")
+        </div>
+    </div>
+
+    <div class="mt-5" id="reviews">
+        <div style="border-bottom:1px solid var(--border);padding-bottom:.6rem;margin-bottom:1.5rem;">
+            <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:1px;margin:0;">
+                OCENY I RECENZJE
+                @if (avgRating.HasValue)
+                {
+                    <span style="font-size:.9rem;font-weight:400;letter-spacing:0;margin-left:.75rem;color:#fbbf24;">
+                        ★ @avgRating.Value.ToString("0.0") / 5 <span style="color:#888;">(@reviewCount)</span>
+                    </span>
+                }
+            </h4>
+        </div>
+
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="card p-4 mb-4" style="max-width:560px;">
+                <h6 class="mb-3">@(userReview != null ? "Twoja ocena" : "Oceń ten film")</h6>
+                <form asp-controller="Reviews" asp-action="Submit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="movieId" value="@Model.MovieId" />
+
+                    <div class="mb-3">
+                        <div class="d-flex gap-2" id="starRow">
+                            @for (int s = 1; s <= 5; s++)
+                            {
+                                bool sel = userReview?.Rating == s;
+                                <label style="cursor:pointer;font-size:1.6rem;color:@(sel ? "#fbbf24" : "#444");" class="star-lbl" data-val="@s">
+                                    <i class="bi @(sel ? "bi-star-fill" : "bi-star")"></i>
+                                    <input type="radio" name="rating" value="@s" @(sel ? "checked" : "") style="display:none;" required />
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <textarea name="comment" class="form-control" rows="3"
+                                  placeholder="Komentarz (opcjonalnie)…" maxlength="1000">@(userReview?.Comment)</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-red">
+                            <i class="bi bi-check-circle me-1"></i>@(userReview != null ? "Zaktualizuj" : "Zapisz ocenę")
+                        </button>
+                        @if (userReview != null)
+                        {
+                            <form asp-controller="Reviews" asp-action="Delete" method="post" class="m-0">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="movieId" value="@Model.MovieId" />
+                                <button type="submit" class="btn btn-outline-secondary"
+                                        onclick="return confirm('Usunąć ocenę?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </form>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted small mb-4"><a asp-controller="Account" asp-action="Login">Zaloguj się</a>, aby dodać ocenę.</p>
+        }
+
+        @if (reviews.Any())
+        {
+            @foreach (var r in reviews)
+            {
+                <div class="card p-3 mb-2" style="max-width:560px;">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span style="color:#fbbf24;">@(new string('★', r.Rating))@(new string('☆', 5 - r.Rating))</span>
+                            <span class="text-muted small ms-2">@r.AppUser?.Email</span>
+                        </div>
+                        <span class="text-muted small">@r.CreatedAt.ToString("dd.MM.yyyy")</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(r.Comment))
+                    {
+                        <p class="mb-0 mt-2 small">@r.Comment</p>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted small">Brak ocen. Bądź pierwszy!</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var sel = document.getElementById('cinema-select');
+    if (sel) {
+        sel.addEventListener('change', function () {
+            var val = this.value;
+            if (!val) return;
+            window.location.href = '/Movies/Details/@Model.MovieId?cinemaId=' + val;
+        });
+    }
+
+    // Star rating interaction
+    var labels = document.querySelectorAll('.star-lbl');
+    labels.forEach(function (lbl, idx) {
+        lbl.addEventListener('mouseenter', function () {
+            labels.forEach(function (l, i) {
+                var icon = l.querySelector('i');
+                icon.className = i <= idx ? 'bi bi-star-fill' : 'bi bi-star';
+                l.style.color  = i <= idx ? '#fbbf24' : '#444';
+            });
+        });
+        lbl.addEventListener('mouseleave', function () {
+            var checked = document.querySelector('.star-lbl input[type=radio]:checked');
+            var checkedVal = checked ? parseInt(checked.value) : 0;
+            labels.forEach(function (l, i) {
+                var icon = l.querySelector('i');
+                icon.className = (i + 1) <= checkedVal ? 'bi bi-star-fill' : 'bi bi-star';
+                l.style.color  = (i + 1) <= checkedVal ? '#fbbf24' : '#444';
+            });
+        });
+        lbl.addEventListener('click', function () {
+            var val = parseInt(this.dataset.val);
+            labels.forEach(function (l, i) {
+                var icon = l.querySelector('i');
+                icon.className = (i + 1) <= val ? 'bi bi-star-fill' : 'bi bi-star';
+                l.style.color  = (i + 1) <= val ? '#fbbf24' : '#444';
+            });
+        });
+    });
+})();
+</script>
+}
