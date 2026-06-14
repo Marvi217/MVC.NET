@@ -34,15 +34,8 @@ namespace CinePlex.Infrastructure
                 int run = 0;
                 for (int i = 0; i < free.Length; i++)
                 {
-                    if (free[i])
-                    {
-                        run++;
-                    }
-                    else
-                    {
-                        if (run == 1) return true;
-                        run = 0;
-                    }
+                    if (free[i]){ run++;}
+                    else{ if (run == 1) return true; run = 0; }
                 }
                 if (run == 1) return true;
             }

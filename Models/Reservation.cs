@@ -4,10 +4,7 @@ namespace CinePlex.Models
 {
     public enum ReservationType { Screening = 0, Marathon = 1 }
 
-    public enum ReservationStatus
-    {
-        Pending, Confirmed, Cancelled
-    }
+    public enum ReservationStatus{ Pending, Confirmed, Cancelled }
 
     public class Reservation
     {

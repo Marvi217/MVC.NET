@@ -142,11 +142,10 @@ namespace CinePlex.Areas.User.Controllers
             var from = new DateTime(y, m, 1);
             var to = from.AddMonths(1);
 
-            var nowAd = DateTime.Now;
             var query = _context.Screenings
                 .AsNoTracking()
                 .Where(s => s.StartTime >= from && s.StartTime < to && s.MarathonId == null)
-                .Where(s => s.IsPublished || (s.PublishDate != null && s.PublishDate <= nowAd));
+                .Where(s => s.IsPublished || (s.PublishDate != null && s.PublishDate <= now));
 
             if (cinemaId.HasValue)
                 query = query.Where(s => s.Hall.CinemaId == cinemaId.Value);

@@ -1,49 +1,112 @@
-@model Reservation
+@model CinePlex.Models.Reservation
+@using CinePlex.Models
 @{
     ViewData["Title"] = "Reservation Found";
+    var layout = HallLayoutConfig.FromJson(Model.Screening.Hall?.LayoutJson);
+    var seatLabel = layout?.GetSeatLabel(Model.SeatNumber) ?? Model.SeatNumber.ToString();
 }
+
+<style>
+    .ticket-stub {
+        overflow: hidden;
+        max-width: 480px;
+        margin: 0 auto 2rem;
+    }
+
+    .ticket-stub-header {
+        padding: 1.2rem 1.5rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .ticket-stub-body {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .ticket-field {
+        margin-bottom: .8rem;
+    }
+
+    .ticket-field-label {
+        margin-bottom: .15rem;
+    }
+
+    .ticket-code {
+        padding: .35rem .75rem;
+        display: inline-block;
+    }
+</style>
+
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-9">
-            <a asp-action="Check" class="text-muted small d-inline-block mb-3"><i class="bi bi-arrow-left"></i> Search another</a>
-            @if (Model == null)
+    <a asp-action="Check" class="text-muted small d-inline-block mb-4">
+        <i class="bi bi-arrow-left"></i> Search another
+    </a>
+
+    <div class="ticket-stub">
+        <div class="ticket-stub-header">
+            @if (!string.IsNullOrEmpty(Model.Screening.Movie?.PosterUrl))
             {
-                <div class="card p-4 text-center">
-                    <i class="bi bi-exclamation-circle" style="font-size:3rem;color:var(--red);"></i>
-                    <h3 class="mt-2">Not Found</h3>
-                    <p class="text-muted">No reservation matches that code.</p>
-                </div>
+                <img src="@Model.Screening.Movie.PosterUrl" style="height:72px;border-radius:6px;flex-shrink:0;" />
             }
-            else
-            {
-                <div class="ticket-card p-4">
-                    <div class="row g-4">
-                        <div class="col-md-7">
-                            <h6 class="text-muted text-uppercase small">Movie</h6>
-                            <h3>@Model.Screening.Movie.Title</h3>
-                            <div class="d-flex gap-2 mb-3">
-                                <span class="badge-genre">@Model.Screening.Movie.Genre</span>
-                                <span class="badge-age">@Model.Screening.Movie.AgeRating</span>
-                            </div>
-                        </div>
-                        <div class="col-md-5 ticket-tear ps-md-4">
-                            <h6 class="text-muted text-uppercase small">Booking</h6>
-                            <ul class="list-unstyled small">
-                                <li class="mb-2"><i class="bi bi-calendar3 text-muted"></i> <strong>@Model.Screening.StartTime.ToString("dddd, MMM d · HH:mm")</strong></li>
-                                <li class="mb-2"><i class="bi bi-building text-muted"></i> @Model.Screening.Hall.Cinema.Name</li>
-                                <li class="mb-2"><i class="bi bi-grid-3x3 text-muted"></i> Hall #@Model.Screening.Hall.Number · <span class="badge-hall @Model.Screening.Hall.Type.ToString().ToLower()">@(Model.Screening.Hall.Type switch { CinePlex.Models.HallType.FourD => "4DX", CinePlex.Models.HallType.ThreeD => "3D", CinePlex.Models.HallType.IMAX => "IMAX", _ => "2D" })</span></li>
-                                <li><i class="bi bi-bookmark text-muted"></i> Seat <strong>@Model.SeatNumber</strong></li>
-                            </ul>
-                            <span class="badge-status @Model.Status.ToString().ToLower()">@Model.Status</span>
+            <div class="flex-grow-1 min-w-0">
+                <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px;color:#fff;">
+                    @Model.Screening.Movie?.Title?.ToUpper()
+                </div>
+                <div class="text-muted small mt-1">
+                    <i class="bi bi-building"></i> @Model.Screening.Hall?.Cinema?.Name · @Model.Screening.Hall?.Cinema?.City
+                </div>
+                <div class="text-muted small">
+                    <i class="bi bi-clock"></i> @Model.Screening.StartTime.ToString("dd.MM.yyyy HH:mm")
+                    &nbsp;|&nbsp; Sala #@Model.Screening.Hall?.Number
+                    <span class="badge-hall @Model.Screening.Hall?.Type.ToString().ToLower() ms-1">
+                        @(Model.Screening.Hall?.Type switch { HallType.FourD => "4DX", HallType.ThreeD => "3D", HallType.IMAX => "IMAX", _ => "2D" })
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="ticket-stub-body">
+            <div class="row align-items-center g-3">
+                <div class="col">
+                    <div class="ticket-field">
+                        <div class="ticket-field-label">Miejsce</div>
+                        <div class="ticket-seat-badge">@seatLabel</div>
+                    </div>
+                    <div class="ticket-field">
+                        <div class="ticket-field-label">Audio</div>
+                        <div class="ticket-field-value">
+                            <span class="badge-audio">@Model.Screening.AudioVersion</span>
                         </div>
                     </div>
-                    <hr class="ticket-divider" />
-                    <div class="text-center">
-                        <div class="text-muted text-uppercase small mb-2">Reservation Code</div>
-                        <div class="reservation-code">@Model.ReservationCode</div>
+                    <div class="ticket-field">
+                        <div class="ticket-field-label">Cena</div>
+                        <div class="ticket-field-value" style="color:#ffa500;">@Model.PricePaid.ToString("0.00") zł</div>
+                    </div>
+                    <div class="ticket-field">
+                        <div class="ticket-field-label">Status</div>
+                        <span class="badge-status @Model.Status.ToString().ToLower()">@Model.Status</span>
                     </div>
                 </div>
-            }
+                <div class="col-auto text-center">
+                    <div id="qr_result" style="width:92px;height:92px;padding:6px;box-sizing:border-box;background:#fff;border-radius:8px;overflow:hidden;"></div>
+                    <div style="font-size:.6rem;color:var(--text-muted);letter-spacing:.5px;">ZESKANUJ PRZY WEJŚCIU</div>
+                </div>
+            </div>
+            <hr class="ticket-divider" />
+            <div class="ticket-field-label mb-1">Kod rezerwacji</div>
+            <div class="ticket-code">@Model.ReservationCode</div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        new QRCode(document.getElementById('qr_result'), {
+            text: '@Model.ReservationCode',
+            width: 80, height: 80,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    </script>
+}

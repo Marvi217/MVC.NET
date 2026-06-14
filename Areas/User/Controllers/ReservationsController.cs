@@ -100,7 +100,18 @@ namespace CinePlex.Areas.User.Controllers
 
         [AllowAnonymous]
         [HttpPost]
-        public async Task<IActionResult> Check(string code)
+        public async Task<IActionResult> Check(string code) => await FindAndShowReservation(code);
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> CheckResult(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return RedirectToAction("Check");
+            return await FindAndShowReservation(code);
+        }
+
+        private async Task<IActionResult> FindAndShowReservation(string code)
         {
             var reservation = await _context.Reservations
                 .AsNoTracking()
@@ -112,7 +123,7 @@ namespace CinePlex.Areas.User.Controllers
             if (reservation == null)
             {
                 ViewBag.Error = "No reservation found with this code.";
-                return View();
+                return View("Check");
             }
 
             return View("CheckResult", reservation);
