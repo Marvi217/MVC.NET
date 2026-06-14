@@ -68,19 +68,25 @@ namespace CinePlex.Services
         public async Task SendEmailConfirmationAsync(string recipientEmail, string recipientName, string confirmationLink)
         {
             var subject = "Potwierdź swój adres e-mail - CinePlex";
-            var body = $"""
-                        Witaj {recipientName},
+            var body = $@"
+                        <p>Witaj {recipientName},</p>
 
-                        Dziękujemy za rejestrację w CinePlex!
-                        Kliknij poniższy link, aby aktywować konto:
+                        <p>Dziękujemy za rejestrację w CinePlex!</p>
 
-                        <a href="{confirmationLink}">Potwierdź adres e-mail</a>
+                        <p>
+                            Kliknij poniższy link, aby aktywować konto:
+                        </p>
 
-                        Link jest ważny przez 24 godziny.
-                        Jeśli to nie Ty — zignoruj tę wiadomość.
+                        <p>
+                            <a href='{confirmationLink}'>Potwierdź adres e-mail</a>
+                        </p>
 
-                        CinePlex
-                        """;
+                        <p>
+                            Link jest ważny przez 24 godziny.<br/>
+                            Jeśli to nie Ty — zignoruj tę wiadomość.
+                        </p>
+
+                        <p>CinePlex</p>";
 
             await SendAsync(recipientEmail, subject, body);
         }
@@ -104,7 +110,14 @@ namespace CinePlex.Services
                 EnableSsl = true,
                 Credentials = new NetworkCredential(user, pass)
             };
-            using var message = new MailMessage(from, to, subject, body);
+
+            using var message = new MailMessage(from, to)
+            {
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
             await client.SendMailAsync(message);
         }
     }
