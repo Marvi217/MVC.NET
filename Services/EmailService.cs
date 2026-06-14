@@ -24,7 +24,7 @@ namespace CinePlex.Services
             var cinema = hall?.Cinema;
             var codes  = string.Join(", ", reservations.Select(r => r.ReservationCode));
 
-            var subject = $"Potwierdzenie rezerwacji — {movie?.Title ?? "CinePlex"}";
+            var subject = $"Potwierdzenie rezerwacji - {movie?.Title ?? "CinePlex"}";
             var body = BuildBody(recipientName, new[]
             {
                 ("Film",  movie?.Title  ?? "–"),
@@ -63,6 +63,26 @@ namespace CinePlex.Services
         {
             var lines = string.Join("\n", rows.Select(r => $"{r.Label,8}: {r.Value}"));
             return $"Witaj {recipientName},\n\nTwoja rezerwacja została potwierdzona!\n\n{lines}\n\nPokaż kod przy wejściu.\n\nCinePlex";
+        }
+
+        public async Task SendEmailConfirmationAsync(string recipientEmail, string recipientName, string confirmationLink)
+        {
+            var subject = "Potwierdź swój adres e-mail - CinePlex";
+            var body = $"""
+                        Witaj {recipientName},
+
+                        Dziękujemy za rejestrację w CinePlex!
+                        Kliknij poniższy link, aby aktywować konto:
+
+                        <a href="{confirmationLink}">Potwierdź adres e-mail</a>
+
+                        Link jest ważny przez 24 godziny.
+                        Jeśli to nie Ty — zignoruj tę wiadomość.
+
+                        CinePlex
+                        """;
+
+            await SendAsync(recipientEmail, subject, body);
         }
 
         private async Task SendAsync(string to, string subject, string body)

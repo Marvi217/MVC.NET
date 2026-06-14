@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
 using CinePlex.Models;
+using CinePlex.Services;
 using CinePlex.ViewModels;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CinePlex.Areas.User.Controllers
 {
@@ -11,11 +12,13 @@ namespace CinePlex.Areas.User.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
+        private readonly IEmailService _emailService;
 
-        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager)
+        public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IEmailService emailService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _emailService = emailService;
         }
 
         public IActionResult Login(string? returnUrl = null)
@@ -46,6 +49,7 @@ namespace CinePlex.Areas.User.Controllers
         public IActionResult Register() => View();
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -59,17 +63,52 @@ namespace CinePlex.Areas.User.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
-            if (result.Succeeded)
+            if (!result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, "User");
-                await _signInManager.SignInAsync(user, false);
-                return RedirectToAction("Index", "Home");
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError("", error.Description);
+                return View(model);
             }
 
-            foreach (var error in result.Errors)
-                ModelState.AddModelError("", error.Description);
+            await _userManager.AddToRoleAsync(user, "User");
 
-            return View(model);
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmLink = Url.Action(
+                action: "ConfirmEmail",
+                controller: "Account",
+                values: new { userId = user.Id, token },
+                protocol: Request.Scheme
+            );
+
+            await _emailService.SendEmailConfirmationAsync(
+                recipientEmail: user.Email!,
+                recipientName: $"{model.FirstName} {model.LastName}".Trim(),
+                confirmationLink: confirmLink!
+            );
+
+            TempData["Info"] = "SprawdŸ skrzynkê — wyœliliœmy link aktywacyjny.";
+            return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ConfirmEmail(string userId, string token)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+                return BadRequest("Nieprawid³owy link.");
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+
+            if (result.Succeeded)
+            {
+                TempData["Success"] = "Email potwierdzony! Mo¿esz siê zalogowaæ.";
+                return RedirectToAction("Login");
+            }
+
+            TempData["Error"] = "Link wygas³ lub jest nieprawid³owy.";
+            return RedirectToAction("Login");
         }
 
         [HttpPost]

@@ -6,5 +6,6 @@ namespace CinePlex.Services
     {
         Task SendReservationConfirmedAsync(IReadOnlyList<Reservation> reservations, string recipientEmail, string recipientName);
         Task SendMarathonConfirmedAsync(IReadOnlyList<Reservation> reservations, string recipientEmail, string recipientName);
+        Task SendEmailConfirmationAsync(string recipientEmail, string recipientName, string confirmationLink);
     }
 }

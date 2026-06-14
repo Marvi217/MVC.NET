@@ -107,9 +107,7 @@ namespace CinePlex.Areas.User.Controllers
 
             var layout = HallLayoutConfig.FromJson(screening.Hall?.LayoutJson);
             var now = DateTime.Now;
-            var guestName = user == null
-                ? $"{vm.FirstName?.Trim()} {vm.LastName?.Trim()}".Trim()
-                : null;
+            var guestName = user == null? $"{vm.FirstName?.Trim()} {vm.LastName?.Trim()}".Trim() : null;
 
             var reservations = vm.SeatNumbers.Select(seatNum =>
             {
