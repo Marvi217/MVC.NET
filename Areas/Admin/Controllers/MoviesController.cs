@@ -52,8 +52,15 @@ namespace CinePlex.Areas.Admin.Controllers
             }
             if (genre.HasValue) query = query.Where(m => m.Genre == genre.Value);
             var total = await query.CountAsync();
-            ViewBag.Search = search; ViewBag.Genre = genre; ViewBag.PageSize = pageSize;
-            ViewBag.Page = page; ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+            page = Math.Clamp(page, 1, totalPages);
+
+            ViewBag.Search = search;
+            ViewBag.Genre = genre;
+            ViewBag.PageSize = pageSize;
+            ViewBag.Page = page;
+            ViewBag.TotalPages = totalPages;
             ViewBag.Genres = Enum.GetValues<Genre>();
             TempData["AdminMoviesPageSize"] = pageSize;
             return View(await query.OrderBy(m => m.Title).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync());
